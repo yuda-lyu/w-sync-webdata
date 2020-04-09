@@ -3,7 +3,7 @@ import genPm from 'wsemi/src/genPm.mjs'
 import cint from 'wsemi/src/cint.mjs'
 import cbol from 'wsemi/src/cbol.mjs'
 import delay from 'wsemi/src/delay.mjs'
-import Evem from 'wsemi/src/Evem.mjs'
+import Evem from 'wsemi/src/evem.mjs'
 
 
 /**
