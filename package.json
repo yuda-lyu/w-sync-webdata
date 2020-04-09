@@ -1,0 +1,38 @@
+{
+  "name": "w-sync-webdata",
+  "version": "1.0.0",
+  "description": "An operator for data synchronization in nodejs and browser.",
+  "main": "dist/w-sync-webdata-server.umd.js",
+  "dependencies": {
+    "lodash": "^4.17.15",
+    "wsemi": "^1.4.1"
+  },
+  "devDependencies": {
+    "w-package-tools": "^1.0.25"
+  },
+  "scripts": {
+    "test": "./node_modules/.bin/mocha --require @babel/register",
+    "deploy": "gh-pages -d docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yuda-lyu/w-sync-webdata.git"
+  },
+  "keywords": [
+    "package",
+    "tool",
+    "operator",
+    "synchronize",
+    "w-converhp",
+    "w-conversi",
+    "w-converws",
+    "nodejs",
+    "browser"
+  ],
+  "author": "yuda-lyu(semisphere)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yuda-lyu/w-sync-webdata/issues"
+  },
+  "homepage": "https://github.com/yuda-lyu/w-sync-webdata#readme"
+}
