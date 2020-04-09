@@ -86,10 +86,15 @@ function WSyncWebdataServer(opt = {}) {
 
 
     //initTableTags
-    function initTableTags(tableTags = {}) {
+    function initTableTags(tableTags = {}, useStorageFirst = false) {
 
         //merge
-        nowTableTags = merge(readTableTags(), tableTags)
+        if (useStorageFirst) {
+            nowTableTags = merge(tableTags, readTableTags())
+        }
+        else {
+            nowTableTags = merge(readTableTags(), tableTags)
+        }
 
         //writeTableTags
         writeTableTags()
@@ -180,6 +185,7 @@ function WSyncWebdataServer(opt = {}) {
      *
      * @memberof WSyncWebdataServer
      * @param {Object} tableTags 輸入各資料表時間戳物件
+     * @param {Boolean} [useStorageFirst=false] 輸入是否優先使用既有的JSON設定檔布林值，預設false
      * @example
      * let tableTags = {...}
      * wsds.initTableTags(tableTags)

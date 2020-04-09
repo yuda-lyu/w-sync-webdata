@@ -188,7 +188,7 @@ wsdc.on('error', (err) => {
 import WSyncWebdataServer from './src/WSyncWebdataServer.mjs'
 import WSyncWebdataClient from './src/WSyncWebdataClient.mjs'
 
-//顯示計時
+//log time
 let i = 0
 console.log('i=', i)
 let ts = setInterval(() => {
