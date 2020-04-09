@@ -111,42 +111,42 @@ wsdc.on('error', (err) => {
 })
 
 // server: nowTableTags {
-//     tabA: '2020-01-01T00:00:00+08:00',
-//     tabB: '2020-01-01T01:00:00+08:00'
-//   }
-//   server: changeTableTags {
-//     tabA: '2020-04-09T12:56:49+08:00|wbYkvr',
-//     tabB: '2020-01-01T01:00:00+08:00'
-//   }
-//   server: push
-//   client: getAPIData before: tabA
-//   client: getAPIData after: table[tabA] = 1
-//   client: getData {
-//     tableName: 'tabA',
-//     timeTag: '2020-04-09T12:56:49+08:00|wbYkvr',
-//     data: 'table[tabA] = 1'
-//   }
-//   server: changeTableTags {
-//     tabA: '2020-04-09T12:56:49+08:00|wbYkvr',
-//     tabB: '2020-04-09T12:56:50+08:00|96hE94'
-//   }
-//   server: push
-//   client: getAPIData before: tabB
-//   client: getAPIData after: table[tabB] = 1
-//   client: getData {
-//     tableName: 'tabB',
-//     timeTag: '2020-04-09T12:56:50+08:00|96hE94',
-//     data: 'table[tabB] = 1'
-//   }
-//   server: changeTableTags {
-//     tabA: '2020-04-09T12:56:50+08:00|PjJF80',
-//     tabB: '2020-04-09T12:56:50+08:00|96hE94'
-//   }
-//   server: push
-//   client: getAPIData before: tabA
-//   client: getAPIData after: table[tabA] = 2
-//   client: getData {
-//     tableName: 'tabA',
-//     timeTag: '2020-04-09T12:56:50+08:00|PjJF80',
-//     data: 'table[tabA] = 2'
-//   }
+//   tabA: '2020-01-01T00:00:00+08:00',
+//   tabB: '2020-01-01T01:00:00+08:00'
+// }
+// server: changeTableTags {
+//   tabA: '2020-04-09T12:56:49+08:00|wbYkvr',
+//   tabB: '2020-01-01T01:00:00+08:00'
+// }
+// server: push
+// client: getAPIData before: tabA
+// client: getAPIData after: table[tabA] = 1
+// client: getData {
+//   tableName: 'tabA',
+//   timeTag: '2020-04-09T12:56:49+08:00|wbYkvr',
+//   data: 'table[tabA] = 1'
+// }
+// server: changeTableTags {
+//   tabA: '2020-04-09T12:56:49+08:00|wbYkvr',
+//   tabB: '2020-04-09T12:56:50+08:00|96hE94'
+// }
+// server: push
+// client: getAPIData before: tabB
+// client: getAPIData after: table[tabB] = 1
+// client: getData {
+//   tableName: 'tabB',
+//   timeTag: '2020-04-09T12:56:50+08:00|96hE94',
+//   data: 'table[tabB] = 1'
+// }
+// server: changeTableTags {
+//   tabA: '2020-04-09T12:56:50+08:00|PjJF80',
+//   tabB: '2020-04-09T12:56:50+08:00|96hE94'
+// }
+// server: push
+// client: getAPIData before: tabA
+// client: getAPIData after: table[tabA] = 2
+// client: getData {
+//   tableName: 'tabA',
+//   timeTag: '2020-04-09T12:56:50+08:00|PjJF80',
+//   data: 'table[tabA] = 2'
+// }
