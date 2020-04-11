@@ -86,13 +86,25 @@ function WSyncWebdataServer(opt = {}) {
 
 
     //initTableTags
-    function initTableTags(tableTags = {}, useStorageFirst = false) {
+    function initTableTags(tableTags = {}, mode = 'useInputFirst') {
+        // mode可有:
+        // useInputFirst
+        // useStorageFirst
+        // useInputOnly
+        // useStorageOnly
 
-        //merge
-        if (useStorageFirst) {
+        //mode
+        if (mode === 'useStorageFirst') {
             nowTableTags = merge(tableTags, readTableTags())
         }
+        else if (mode === 'useInputOnly') {
+            nowTableTags = tableTags
+        }
+        else if (mode === 'useStorageOnly') {
+            nowTableTags = readTableTags()
+        }
         else {
+            //mode === 'useInputFirst'
             nowTableTags = merge(readTableTags(), tableTags)
         }
 
@@ -185,10 +197,11 @@ function WSyncWebdataServer(opt = {}) {
      *
      * @memberof WSyncWebdataServer
      * @param {Object} tableTags 輸入各資料表時間戳物件
-     * @param {Boolean} [useStorageFirst=false] 輸入是否優先使用既有的JSON設定檔布林值，預設false
+     * @param {String} [mode='useInputFirst'] 輸入使用設定方式字串，可有'useInputFirst'代表使用傳入設定優先再與既有JSON檔設定合併，為預設值，'useStorageFirst'代表使用既有JSON檔設定優先再與傳入設定合併，'useInputOnly'代表只使用傳入設定，'useStorageOnly'代表只使用既有JSON檔設定
      * @example
      * let tableTags = {...}
-     * wsds.initTableTags(tableTags)
+     * let mode = ''
+     * wsds.initTableTags(tableTags, mode)
      */
     ee.initTableTags = initTableTags
 

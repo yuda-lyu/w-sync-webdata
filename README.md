@@ -183,7 +183,7 @@ wsdc.on('error', (err) => {
 ```
 
 #### Example for client polling:
-> **Link:** [[dev source code](https://github.com/yuda-lyu/w-sync-webdata/blob/master/srvscla.mjs)]
+> **Link:** [[dev source code](https://github.com/yuda-lyu/w-sync-webdata/blob/master/srvsclb.mjs)]
 ```alias
 import WSyncWebdataServer from './src/WSyncWebdataServer.mjs'
 import WSyncWebdataClient from './src/WSyncWebdataClient.mjs'
