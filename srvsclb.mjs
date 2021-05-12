@@ -208,3 +208,5 @@ wsdc.on('error', (err) => {
 //   data: 'table[tabA] = 2'
 // }
 // i= 7
+
+//node --experimental-modules --es-module-specifier-resolution=node srvsclb.mjs

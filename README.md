@@ -19,7 +19,7 @@ To view documentation or get support, visit [docs](https://yuda-lyu.github.io/w-
 
 ## Installation
 ### Using npm(ES6 module):
-> **Note:** `w-sync-webdata-server` and `w-sync-webdata-client` depends on `lodash` and `wsemi`.
+> **Note:** `w-sync-webdata-server` and `w-sync-webdata-client` is mainly dependent on `lodash` and `wsemi`.
 
 ```alias
 npm i w-sync-webdata

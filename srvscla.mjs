@@ -150,3 +150,5 @@ wsdc.on('error', (err) => {
 //   timeTag: '2020-04-09T12:56:50+08:00|PjJF80',
 //   data: 'table[tabA] = 2'
 // }
+
+//node --experimental-modules --es-module-specifier-resolution=node srvscla.mjs
