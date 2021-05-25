@@ -48,13 +48,29 @@ function WSyncWebdataClient(opt = {}) {
     }
 
 
-    //setTableTags
+    /**
+     * 直接設定各資料表時間資料
+     *
+     * @memberof WSyncWebdataClient
+     * @param {Object} tableTags 輸入各資料表時間戳物件
+     * @example
+     * let tableTags = {...}
+     * wsdc.setTableTags(tableTags)
+     */
     function setTableTags(tableTags = {}) {
         nowTableTags = tableTags
     }
 
 
-    //updateTableTags
+    /**
+     * 主動更新指定資料表之時間戳，當有新的資料表時間戳資料時調用此函數進行更新
+     *
+     * @memberof WSyncWebdataClient
+     * @param {Object} tableTags 輸入各資料表時間戳物件
+     * @example
+     * let tableTags = {...}
+     * wsdc.updateTableTags(tableTags)
+     */
     async function updateTableTags(tableTags = {}) {
         let pms = []
 
@@ -108,7 +124,13 @@ function WSyncWebdataClient(opt = {}) {
     }
 
 
-    //pollingTableTags
+    /**
+     * 主動觸發輪詢更新各資料表之時間戳
+     *
+     * @memberof WSyncWebdataClient
+     * @example
+     * wsdc.pollingTableTags()
+     */
     async function pollingTableTags() {
 
         //check
@@ -165,40 +187,9 @@ function WSyncWebdataClient(opt = {}) {
     }
 
 
-    /**
-     * 直接設定各資料表時間資料
-     *
-     * @memberof WSyncWebdataClient
-     * @param {Object} tableTags 輸入各資料表時間戳物件
-     * @example
-     * let tableTags = {...}
-     * wsdc.setTableTags(tableTags)
-     */
     ee.setTableTags = setTableTags
-
-
-    /**
-     * 主動更新指定資料表之時間戳，當有新的資料表時間戳資料時調用此函數進行更新
-     *
-     * @memberof WSyncWebdataClient
-     * @param {Object} tableTags 輸入各資料表時間戳物件
-     * @example
-     * let tableTags = {...}
-     * wsdc.updateTableTags(tableTags)
-     */
     ee.updateTableTags = updateTableTags
-
-
-    /**
-     * 主動觸發輪詢更新各資料表之時間戳
-     *
-     * @memberof WSyncWebdataClient
-     * @example
-     * wsdc.pollingTableTags()
-     */
     ee.pollingTableTags = pollingTableTags
-
-
     return ee
 }
 

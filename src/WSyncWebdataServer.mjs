@@ -48,7 +48,14 @@ function WSyncWebdataServer(opt = {}) {
     }
 
 
-    //readTableTags
+    /**
+     * 讀取各資料表時間資料
+     *
+     * @memberof WSyncWebdataServer
+     * @returns {Object} 回傳各資料表時間戳物件
+     * @example
+     * let tableTags = wsds.readTableTags()
+     */
     function readTableTags() {
         let r = {}
         try {
@@ -70,7 +77,16 @@ function WSyncWebdataServer(opt = {}) {
     }
 
 
-    //writeTableTags
+    /**
+     * 儲存各資料表時間資料
+     *
+     * @memberof WSyncWebdataServer
+     * @param {Object} tableTags 輸入各資料表時間戳物件
+     * @returns {Undefined} 無回傳
+     * @example
+     * let tableTags = {...}
+     * wsds.writeTableTags(tableTags)
+     */
     function writeTableTags() {
         try {
             let c = o2j(nowTableTags)
@@ -85,7 +101,18 @@ function WSyncWebdataServer(opt = {}) {
     }
 
 
-    //initTableTags
+    /**
+     * 初始化各資料表時間資料
+     *
+     * @memberof WSyncWebdataServer
+     * @param {Object} tableTags 輸入各資料表時間戳物件
+     * @param {String} [mode='useInputFirst'] 輸入使用設定方式字串，可有'useInputFirst'代表使用傳入設定優先再與既有JSON檔設定合併，為預設值，'useStorageFirst'代表使用既有JSON檔設定優先再與傳入設定合併，'useInputOnly'代表只使用傳入設定，'useStorageOnly'代表只使用既有JSON檔設定
+     * @returns {Undefined} 無回傳
+     * @example
+     * let tableTags = {...}
+     * let mode = ''
+     * wsds.initTableTags(tableTags, mode)
+     */
     function initTableTags(tableTags = {}, mode = 'useInputFirst') {
         // mode可有:
         // useInputFirst
@@ -114,7 +141,16 @@ function WSyncWebdataServer(opt = {}) {
     }
 
 
-    //setTableTags
+    /**
+     * 直接設定各資料表時間資料
+     *
+     * @memberof WSyncWebdataServer
+     * @param {Object} tableTags 輸入各資料表時間戳物件
+     * @returns {Undefined} 無回傳
+     * @example
+     * let tableTags = {...}
+     * wsds.setTableTags(tableTags)
+     */
     function setTableTags(tableTags = {}) {
 
         //merge
@@ -126,7 +162,14 @@ function WSyncWebdataServer(opt = {}) {
     }
 
 
-    //getTableTags
+    /**
+     * 直接取得各資料表時間資料
+     *
+     * @memberof WSyncWebdataServer
+     * @returns {Object} 回傳各資料表時間戳物件
+     * @example
+     * let tableTags = wsds.getTableTags()
+     */
     function getTableTags() {
         return nowTableTags
     }
@@ -144,7 +187,16 @@ function WSyncWebdataServer(opt = {}) {
     }, 200)
 
 
-    //updateTableTag
+    /**
+     * 更新指定資料表之時間戳，當資料表更新時需調用此函數
+     *
+     * @memberof WSyncWebdataServer
+     * @param {String} tableTag 輸入欲更新指定資料表名稱字串
+     * @returns {Undefined} 無回傳
+     * @example
+     * let tableName = '...'
+     * wsds.updateTableTag(tableName)
+     */
     function updateTableTag(tableName) {
 
         //modify
@@ -169,82 +221,12 @@ function WSyncWebdataServer(opt = {}) {
     function onChangeUpdateTableTag() {} onChangeUpdateTableTag()
 
 
-    /**
-     * 讀取各資料表時間資料
-     *
-     * @memberof WSyncWebdataServer
-     * @returns {Object} 回傳各資料表時間戳物件
-     * @example
-     * let tableTags = wsds.readTableTags()
-     */
     ee.readTableTags = readTableTags
-
-
-    /**
-     * 儲存各資料表時間資料
-     *
-     * @memberof WSyncWebdataServer
-     * @param {Object} tableTags 輸入各資料表時間戳物件
-     * @returns {Undefined} 無回傳
-     * @example
-     * let tableTags = {...}
-     * wsds.writeTableTags(tableTags)
-     */
     ee.writeTableTags = writeTableTags
-
-
-    /**
-     * 初始化各資料表時間資料
-     *
-     * @memberof WSyncWebdataServer
-     * @param {Object} tableTags 輸入各資料表時間戳物件
-     * @param {String} [mode='useInputFirst'] 輸入使用設定方式字串，可有'useInputFirst'代表使用傳入設定優先再與既有JSON檔設定合併，為預設值，'useStorageFirst'代表使用既有JSON檔設定優先再與傳入設定合併，'useInputOnly'代表只使用傳入設定，'useStorageOnly'代表只使用既有JSON檔設定
-     * @returns {Undefined} 無回傳
-     * @example
-     * let tableTags = {...}
-     * let mode = ''
-     * wsds.initTableTags(tableTags, mode)
-     */
     ee.initTableTags = initTableTags
-
-
-    /**
-     * 直接設定各資料表時間資料
-     *
-     * @memberof WSyncWebdataServer
-     * @param {Object} tableTags 輸入各資料表時間戳物件
-     * @returns {Undefined} 無回傳
-     * @example
-     * let tableTags = {...}
-     * wsds.setTableTags(tableTags)
-     */
     ee.setTableTags = setTableTags
-
-
-    /**
-     * 直接取得各資料表時間資料
-     *
-     * @memberof WSyncWebdataServer
-     * @returns {Object} 回傳各資料表時間戳物件
-     * @example
-     * let tableTags = wsds.getTableTags()
-     */
     ee.getTableTags = getTableTags
-
-
-    /**
-     * 更新指定資料表之時間戳，當資料表更新時需調用此函數
-     *
-     * @memberof WSyncWebdataServer
-     * @param {String} tableTag 輸入欲更新指定資料表名稱字串
-     * @returns {Undefined} 無回傳
-     * @example
-     * let tableName = '...'
-     * wsds.updateTableTag(tableName)
-     */
     ee.updateTableTag = updateTableTag
-
-
     return ee
 }
 
