@@ -1,5 +1,5 @@
 # w-sync-webdata
-An operator for data synchronization in nodejs and browser.
+An operator for data synchronization between nodejs and browser.
 
 ![language](https://img.shields.io/badge/language-JavaScript-orange.svg) 
 [![npm version](http://img.shields.io/npm/v/w-sync-webdata.svg?style=flat)](https://npmjs.org/package/w-sync-webdata) 
