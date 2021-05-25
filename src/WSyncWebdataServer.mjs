@@ -16,7 +16,7 @@ let fdSrv = path.resolve()
 /**
  * 伺服器端之資料同步器
  *
- * @class
+ * @class WSyncWebdataServer
  * @param {Object} [opt={}] 輸入設定物件，預設{}
  * @param {Integer} [opt.fnTableTags='tableTags.json'] 輸入各資料表時間戳儲存檔案名稱字串，預設'tableTags.json'
  * @returns {Object} 回傳後端資料同步物件，可監聽事件changeTableTags、error，可使用函數readTableTags、writeTableTags、initTableTags、setTableTags、getTableTags、updateTableTag
@@ -185,6 +185,7 @@ function WSyncWebdataServer(opt = {}) {
      *
      * @memberof WSyncWebdataServer
      * @param {Object} tableTags 輸入各資料表時間戳物件
+     * @returns {Undefined} 無回傳
      * @example
      * let tableTags = {...}
      * wsds.writeTableTags(tableTags)
@@ -198,6 +199,7 @@ function WSyncWebdataServer(opt = {}) {
      * @memberof WSyncWebdataServer
      * @param {Object} tableTags 輸入各資料表時間戳物件
      * @param {String} [mode='useInputFirst'] 輸入使用設定方式字串，可有'useInputFirst'代表使用傳入設定優先再與既有JSON檔設定合併，為預設值，'useStorageFirst'代表使用既有JSON檔設定優先再與傳入設定合併，'useInputOnly'代表只使用傳入設定，'useStorageOnly'代表只使用既有JSON檔設定
+     * @returns {Undefined} 無回傳
      * @example
      * let tableTags = {...}
      * let mode = ''
@@ -211,6 +213,7 @@ function WSyncWebdataServer(opt = {}) {
      *
      * @memberof WSyncWebdataServer
      * @param {Object} tableTags 輸入各資料表時間戳物件
+     * @returns {Undefined} 無回傳
      * @example
      * let tableTags = {...}
      * wsds.setTableTags(tableTags)
@@ -234,6 +237,7 @@ function WSyncWebdataServer(opt = {}) {
      *
      * @memberof WSyncWebdataServer
      * @param {String} tableTag 輸入欲更新指定資料表名稱字串
+     * @returns {Undefined} 無回傳
      * @example
      * let tableName = '...'
      * wsds.updateTableTag(tableName)
