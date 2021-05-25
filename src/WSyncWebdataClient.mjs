@@ -7,7 +7,7 @@ import Evem from 'wsemi/src/evem.mjs'
 
 
 /**
- * 伺服器端之資料同步器
+ * 瀏覽器端之資料同步器
  *
  * @class
  * @param {Object} [opt={}] 輸入設定物件，預設{}

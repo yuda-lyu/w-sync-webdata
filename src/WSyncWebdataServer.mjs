@@ -16,7 +16,7 @@ let fdSrv = path.resolve()
 /**
  * 伺服器端之資料同步器
  *
- * @class WSyncWebdataServer
+ * @class
  * @param {Object} [opt={}] 輸入設定物件，預設{}
  * @param {Integer} [opt.fnTableTags='tableTags.json'] 輸入各資料表時間戳儲存檔案名稱字串，預設'tableTags.json'
  * @returns {Object} 回傳後端資料同步物件，可監聽事件changeTableTags、error，可使用函數readTableTags、writeTableTags、initTableTags、setTableTags、getTableTags、updateTableTag
