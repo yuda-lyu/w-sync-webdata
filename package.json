@@ -1,11 +1,11 @@
 {
   "name": "w-sync-webdata",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "An operator for data synchronization between nodejs and browser.",
   "main": "dist/w-sync-webdata-server.umd.js",
   "dependencies": {
     "lodash": "^4.17.21",
-    "wsemi": "^1.5.80"
+    "wsemi": "^1.6.12"
   },
   "devDependencies": {
     "w-package-tools": "^1.0.56"
