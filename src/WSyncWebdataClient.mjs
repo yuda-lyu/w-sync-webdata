@@ -1,4 +1,5 @@
 import each from 'lodash/each'
+import cloneDeep from 'lodash/cloneDeep'
 import genPm from 'wsemi/src/genPm.mjs'
 import cint from 'wsemi/src/cint.mjs'
 import cbol from 'wsemi/src/cbol.mjs'
@@ -13,7 +14,7 @@ import Evem from 'wsemi/src/evem.mjs'
  * @param {Object} [opt={}] 輸入設定物件，預設{}
  * @param {Boolean} [opt.usePollingTableTags=false] 輸入是否用前端輪詢取得各資料表時間戳布林值，預設false
  * @param {Integer} [opt.pollingIntervalTime=2000] 輸入每次輪詢間隔之最小毫秒整數，預設2000
- * @returns {Object} 回傳前端資料同步物件，可監聽事件refreshTags、refreshTable、getData、error，可使用函數updateTableTags、pollingTableTags
+ * @returns {Object} 回傳前端資料同步物件，可監聽事件refreshTags、refreshState、refreshTable、getData、error，可使用函數updateTableTags、pollingTableTags
  * @example
  */
 function WSyncWebdataClient(opt = {}) {
@@ -74,12 +75,34 @@ function WSyncWebdataClient(opt = {}) {
     async function updateTableTags(tableTags = {}) {
         let pms = []
 
-        //calc
+        //needToRefresh
+        let needToRefresh = false
         each(tableTags, (v, k) => {
 
             //原有更新時間戳
             let vv = nowTableTags[k]
 
+            //check
+            if (vv !== v) {
+                needToRefresh = true
+            }
+
+        })
+
+        //emit,
+        eeEmit('refreshState', {
+            needToRefresh,
+            oldTableTags: cloneDeep(nowTableTags),
+            newTableTags: cloneDeep(tableTags),
+        })
+
+        //確認各tags的時間戳
+        each(tableTags, (v, k) => {
+
+            //原有更新時間戳
+            let vv = nowTableTags[k]
+
+            //check
             if (vv !== v) {
 
                 //pm
@@ -116,6 +139,7 @@ function WSyncWebdataClient(opt = {}) {
                     })
 
             }
+
         })
 
         //Promise.all

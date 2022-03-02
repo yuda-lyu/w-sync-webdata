@@ -85,6 +85,11 @@ ee.on('push', (nowTableTags) => {
 
 })
 
+//refreshState
+wsdc.on('refreshState', (msg) => {
+    console.log('client: refreshState needToRefresh', msg.needToRefresh)
+})
+
 //refreshTable
 wsdc.on('refreshTable', (input) => {
     //console.log('client: refreshTable', input)
@@ -95,6 +100,9 @@ wsdc.on('refreshTable', (input) => {
         .then((data) => {
             console.log('client: getAPIData after: ' + data)
             input.pm.resolve(data) //Use pm.resolve to retrieve the data, and pm.reject the message when get an error.
+        })
+        .catch((err) => {
+            input.pm.reject(err)
         })
 
 })
@@ -119,6 +127,7 @@ wsdc.on('error', (err) => {
 //   tabB: '2020-01-01T01:00:00+08:00'
 // }
 // server: push
+// client: refreshState needToRefresh true
 // client: getAPIData before: tabA
 // client: getAPIData after: table[tabA] = 1
 // client: getData {
@@ -131,6 +140,7 @@ wsdc.on('error', (err) => {
 //   tabB: '2020-04-09T12:56:50+08:00|96hE94'
 // }
 // server: push
+// client: refreshState needToRefresh true
 // client: getAPIData before: tabB
 // client: getAPIData after: table[tabB] = 1
 // client: getData {
@@ -143,6 +153,7 @@ wsdc.on('error', (err) => {
 //   tabB: '2020-04-09T12:56:50+08:00|96hE94'
 // }
 // server: push
+// client: refreshState needToRefresh true
 // client: getAPIData before: tabA
 // client: getAPIData after: table[tabA] = 2
 // client: getData {

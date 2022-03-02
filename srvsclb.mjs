@@ -115,7 +115,15 @@ wsdc.on('refreshTags', ({ pm }) => {
             console.log('client: getAPITableTags after: ', nowTableTags)
             pm.resolve(nowTableTags)
         })
+        .catch((err) => {
+            pm.reject(err)
+        })
 
+})
+
+//refreshState
+wsdc.on('refreshState', (msg) => {
+    console.log('client: refreshState needToRefresh', msg.needToRefresh)
 })
 
 //refreshTable
@@ -128,6 +136,9 @@ wsdc.on('refreshTable', (input) => {
         .then((data) => {
             console.log('client: getAPIData after: ' + data)
             input.pm.resolve(data) //Use pm.resolve to retrieve the data, and pm.reject the message when get an error.
+        })
+        .catch((err) => {
+            input.pm.reject(err)
         })
 
 })
@@ -153,6 +164,7 @@ wsdc.on('error', (err) => {
 //   tabA: '2020-01-01T00:00:00+08:00',
 //   tabB: '2020-01-01T01:00:00+08:00'
 // }
+// client: refreshState needToRefresh false
 // i= 1
 // i= 2
 // client: getAPITableTags before
@@ -160,51 +172,54 @@ wsdc.on('error', (err) => {
 //   tabA: '2020-01-01T00:00:00+08:00',
 //   tabB: '2020-01-01T01:00:00+08:00'
 // }
+// client: refreshState needToRefresh false
 // server: changeTableTags {
-//   tabA: '2020-04-09T13:51:50+08:00|ReG9rQ',
+//   tabA: '2022-03-02T14:41:07+08:00|yzlAPz',
 //   tabB: '2020-01-01T01:00:00+08:00'
 // }
 // i= 3
 // server: changeTableTags {
-//   tabA: '2020-04-09T13:51:50+08:00|ReG9rQ',
-//   tabB: '2020-04-09T13:51:51+08:00|ABX4Vo'
+//   tabA: '2022-03-02T14:41:07+08:00|yzlAPz',
+//   tabB: '2022-03-02T14:41:08+08:00|LZmkJV'
 // }
 // i= 4
 // client: getAPITableTags before
 // client: getAPITableTags after:  {
-//   tabA: '2020-04-09T13:51:50+08:00|ReG9rQ',
-//   tabB: '2020-04-09T13:51:51+08:00|ABX4Vo'
+//   tabA: '2022-03-02T14:41:07+08:00|yzlAPz',
+//   tabB: '2022-03-02T14:41:08+08:00|LZmkJV'
 // }
+// client: refreshState needToRefresh true
 // client: getAPIData before: tabA
 // client: getAPIData before: tabB
 // client: getAPIData after: table[tabA] = 1
 // client: getAPIData after: table[tabB] = 1
 // client: getData {
 //   tableName: 'tabA',
-//   timeTag: '2020-04-09T13:51:50+08:00|ReG9rQ',
+//   timeTag: '2022-03-02T14:41:07+08:00|yzlAPz',
 //   data: 'table[tabA] = 1'
 // }
 // client: getData {
 //   tableName: 'tabB',
-//   timeTag: '2020-04-09T13:51:51+08:00|ABX4Vo',
+//   timeTag: '2022-03-02T14:41:08+08:00|LZmkJV',
 //   data: 'table[tabB] = 1'
 // }
 // i= 5
 // server: changeTableTags {
-//   tabA: '2020-04-09T13:51:52+08:00|8C0lvy',
-//   tabB: '2020-04-09T13:51:51+08:00|ABX4Vo'
+//   tabA: '2022-03-02T14:41:10+08:00|NDGfpO',
+//   tabB: '2022-03-02T14:41:08+08:00|LZmkJV'
 // }
 // i= 6
 // client: getAPITableTags before
 // client: getAPITableTags after:  {
-//   tabA: '2020-04-09T13:51:52+08:00|8C0lvy',
-//   tabB: '2020-04-09T13:51:51+08:00|ABX4Vo'
+//   tabA: '2022-03-02T14:41:10+08:00|NDGfpO',
+//   tabB: '2022-03-02T14:41:08+08:00|LZmkJV'
 // }
+// client: refreshState needToRefresh true
 // client: getAPIData before: tabA
 // client: getAPIData after: table[tabA] = 2
 // client: getData {
 //   tableName: 'tabA',
-//   timeTag: '2020-04-09T13:51:52+08:00|8C0lvy',
+//   timeTag: '2022-03-02T14:41:10+08:00|NDGfpO',
 //   data: 'table[tabA] = 2'
 // }
 // i= 7
