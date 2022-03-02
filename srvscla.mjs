@@ -113,6 +113,20 @@ wsdc.on('getData', (data) => {
     //Update data, save or transfer it to vuex etc.
 })
 
+//beforeUpdateTableTags, afterUpdateTableTags, beforePollingTableTags, afterPollingTableTags
+wsdc.on('beforeUpdateTableTags', (msg) => {
+    console.log('client: beforeUpdateTableTags', msg)
+})
+wsdc.on('afterUpdateTableTags', (msg) => {
+    console.log('client: afterUpdateTableTags', msg)
+})
+wsdc.on('beforePollingTableTags', () => {
+    console.log('client: beforePollingTableTags')
+})
+wsdc.on('afterPollingTableTags', () => {
+    console.log('client: afterPollingTableTags')
+})
+
 //error
 wsdc.on('error', (err) => {
     console.log('client: error', err)
@@ -123,43 +137,103 @@ wsdc.on('error', (err) => {
 //   tabB: '2020-01-01T01:00:00+08:00'
 // }
 // server: changeTableTags {
-//   tabA: '2020-04-09T12:56:49+08:00|wbYkvr',
+//   tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
 //   tabB: '2020-01-01T01:00:00+08:00'
 // }
 // server: push
+// client: beforeUpdateTableTags {
+//   oldTableTags: {
+//     tabA: '2020-01-01T00:00:00+08:00',
+//     tabB: '2020-01-01T01:00:00+08:00'
+//   },
+//   newTableTags: {
+//     tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
+//     tabB: '2020-01-01T01:00:00+08:00'
+//   }
+// }
 // client: refreshState needToRefresh true
 // client: getAPIData before: tabA
 // client: getAPIData after: table[tabA] = 1
 // client: getData {
 //   tableName: 'tabA',
-//   timeTag: '2020-04-09T12:56:49+08:00|wbYkvr',
+//   timeTag: '2022-03-02T15:07:43+08:00|pDTyK1',
 //   data: 'table[tabA] = 1'
 // }
+// client: afterUpdateTableTags {
+//   oldTableTags: {
+//     tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
+//     tabB: '2020-01-01T01:00:00+08:00'
+//   },
+//   newTableTags: {
+//     tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
+//     tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//   }
+// }
 // server: changeTableTags {
-//   tabA: '2020-04-09T12:56:49+08:00|wbYkvr',
-//   tabB: '2020-04-09T12:56:50+08:00|96hE94'
+//   tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
+//   tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
 // }
 // server: push
+// client: beforeUpdateTableTags {
+//   oldTableTags: {
+//     tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
+//     tabB: '2020-01-01T01:00:00+08:00'
+//   },
+//   newTableTags: {
+//     tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
+//     tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//   }
+// }
 // client: refreshState needToRefresh true
 // client: getAPIData before: tabB
 // client: getAPIData after: table[tabB] = 1
 // client: getData {
 //   tableName: 'tabB',
-//   timeTag: '2020-04-09T12:56:50+08:00|96hE94',
+//   timeTag: '2022-03-02T15:07:43+08:00|Hkt6GZ',
 //   data: 'table[tabB] = 1'
 // }
+// client: afterUpdateTableTags {
+//   oldTableTags: {
+//     tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
+//     tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//   },
+//   newTableTags: {
+//     tabA: '2022-03-02T15:07:43+08:00|DUZiKH',
+//     tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//   }
+// }
 // server: changeTableTags {
-//   tabA: '2020-04-09T12:56:50+08:00|PjJF80',
-//   tabB: '2020-04-09T12:56:50+08:00|96hE94'
+//   tabA: '2022-03-02T15:07:43+08:00|DUZiKH',
+//   tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
 // }
 // server: push
+// client: beforeUpdateTableTags {
+//   oldTableTags: {
+//     tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
+//     tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//   },
+//   newTableTags: {
+//     tabA: '2022-03-02T15:07:43+08:00|DUZiKH',
+//     tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//   }
+// }
 // client: refreshState needToRefresh true
 // client: getAPIData before: tabA
 // client: getAPIData after: table[tabA] = 2
 // client: getData {
 //   tableName: 'tabA',
-//   timeTag: '2020-04-09T12:56:50+08:00|PjJF80',
+//   timeTag: '2022-03-02T15:07:43+08:00|DUZiKH',
 //   data: 'table[tabA] = 2'
+// }
+// client: afterUpdateTableTags {
+//   oldTableTags: {
+//     tabA: '2022-03-02T15:07:43+08:00|DUZiKH',
+//     tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//   },
+//   newTableTags: {
+//     tabA: '2022-03-02T15:07:43+08:00|DUZiKH',
+//     tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//   }
 // }
 
 //node --experimental-modules --es-module-specifier-resolution=node srvscla.mjs

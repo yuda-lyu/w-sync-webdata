@@ -75,6 +75,12 @@ function WSyncWebdataClient(opt = {}) {
     async function updateTableTags(tableTags = {}) {
         let pms = []
 
+        //emit
+        eeEmit('beforeUpdateTableTags', {
+            oldTableTags: cloneDeep(nowTableTags),
+            newTableTags: cloneDeep(tableTags),
+        })
+
         //needToRefresh
         let needToRefresh = false
         each(tableTags, (v, k) => {
@@ -145,6 +151,12 @@ function WSyncWebdataClient(opt = {}) {
         //Promise.all
         await Promise.all(pms) //不會有catch
 
+        //emit
+        eeEmit('afterUpdateTableTags', {
+            oldTableTags: cloneDeep(nowTableTags),
+            newTableTags: cloneDeep(tableTags),
+        })
+
     }
 
 
@@ -162,6 +174,9 @@ function WSyncWebdataClient(opt = {}) {
             return
         }
         isPolling = true
+
+        //emit
+        eeEmit('beforePollingTableTags')
 
         //pm
         let pm = genPm()
@@ -191,6 +206,9 @@ function WSyncWebdataClient(opt = {}) {
 
         //延遲opt.pollingIntervalTime毫秒
         await delay(opt.pollingIntervalTime)
+
+        //emit
+        eeEmit('afterPollingTableTags')
 
         //恢復isPolling
         isPolling = false

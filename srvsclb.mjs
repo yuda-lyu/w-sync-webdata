@@ -149,6 +149,20 @@ wsdc.on('getData', (data) => {
     //Update data, save or transfer it to vuex etc.
 })
 
+//beforeUpdateTableTags, afterUpdateTableTags, beforePollingTableTags, afterPollingTableTags
+wsdc.on('beforeUpdateTableTags', (msg) => {
+    console.log('client: beforeUpdateTableTags', msg)
+})
+wsdc.on('afterUpdateTableTags', (msg) => {
+    console.log('client: afterUpdateTableTags', msg)
+})
+wsdc.on('beforePollingTableTags', () => {
+    console.log('client: beforePollingTableTags')
+})
+wsdc.on('afterPollingTableTags', () => {
+    console.log('client: afterPollingTableTags')
+})
+
 //error
 wsdc.on('error', (err) => {
     console.log('client: error', err)
@@ -159,69 +173,122 @@ wsdc.on('error', (err) => {
 //   tabA: '2020-01-01T00:00:00+08:00',
 //   tabB: '2020-01-01T01:00:00+08:00'
 // }
+// client: beforePollingTableTags
 // client: getAPITableTags before
 // client: getAPITableTags after:  {
 //   tabA: '2020-01-01T00:00:00+08:00',
 //   tabB: '2020-01-01T01:00:00+08:00'
 // }
+// client: beforeUpdateTableTags {
+//   oldTableTags: {
+//     tabA: '2020-01-01T00:00:00+08:00',
+//     tabB: '2020-01-01T01:00:00+08:00'
+//   },
+//   newTableTags: {
+//     tabA: '2020-01-01T00:00:00+08:00',
+//     tabB: '2020-01-01T01:00:00+08:00'
+//   }
+// }
 // client: refreshState needToRefresh false
+// client: afterUpdateTableTags {
+//   oldTableTags: {
+//     tabA: '2020-01-01T00:00:00+08:00',
+//     tabB: '2020-01-01T01:00:00+08:00'
+//   },
+//   newTableTags: {
+//     tabA: '2020-01-01T00:00:00+08:00',
+//     tabB: '2020-01-01T01:00:00+08:00'
+//   }
+// }
 // i= 1
 // i= 2
+// client: afterPollingTableTags
+// client: beforePollingTableTags
 // client: getAPITableTags before
 // client: getAPITableTags after:  {
-//   tabA: '2020-01-01T00:00:00+08:00',
+//   tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
 //   tabB: '2020-01-01T01:00:00+08:00'
 // }
-// client: refreshState needToRefresh false
+// client: beforeUpdateTableTags {
+//   oldTableTags: {
+//     tabA: '2020-01-01T00:00:00+08:00',
+//     tabB: '2020-01-01T01:00:00+08:00'
+//   },
+//   newTableTags: {
+//     tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
+//     tabB: '2020-01-01T01:00:00+08:00'
+//   }
+// }
+// client: refreshState needToRefresh true
+// client: getAPIData before: tabA
+// client: getAPIData after: table[tabA] = 1
+// client: getData {
+//   tableName: 'tabA',
+//   timeTag: '2022-03-02T15:09:45+08:00|0M4atZ',
+//   data: 'table[tabA] = 1'
+// }
+// client: afterUpdateTableTags {
+//   oldTableTags: {
+//     tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
+//     tabB: '2020-01-01T01:00:00+08:00'
+//   },
+//   newTableTags: {
+//     tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
+//     tabB: '2020-01-01T01:00:00+08:00'
+//   }
+// }
 // server: changeTableTags {
-//   tabA: '2022-03-02T14:41:07+08:00|yzlAPz',
+//   tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
 //   tabB: '2020-01-01T01:00:00+08:00'
 // }
 // i= 3
 // server: changeTableTags {
-//   tabA: '2022-03-02T14:41:07+08:00|yzlAPz',
-//   tabB: '2022-03-02T14:41:08+08:00|LZmkJV'
+//   tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
+//   tabB: '2022-03-02T15:09:46+08:00|2erDO0'
 // }
 // i= 4
+// client: afterPollingTableTags
+// client: beforePollingTableTags
 // client: getAPITableTags before
 // client: getAPITableTags after:  {
-//   tabA: '2022-03-02T14:41:07+08:00|yzlAPz',
-//   tabB: '2022-03-02T14:41:08+08:00|LZmkJV'
+//   tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
+//   tabB: '2022-03-02T15:09:46+08:00|2erDO0'
+// }
+// client: beforeUpdateTableTags {
+//   oldTableTags: {
+//     tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
+//     tabB: '2020-01-01T01:00:00+08:00'
+//   },
+//   newTableTags: {
+//     tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
+//     tabB: '2022-03-02T15:09:46+08:00|2erDO0'
+//   }
 // }
 // client: refreshState needToRefresh true
-// client: getAPIData before: tabA
 // client: getAPIData before: tabB
-// client: getAPIData after: table[tabA] = 1
 // client: getAPIData after: table[tabB] = 1
 // client: getData {
-//   tableName: 'tabA',
-//   timeTag: '2022-03-02T14:41:07+08:00|yzlAPz',
-//   data: 'table[tabA] = 1'
-// }
-// client: getData {
 //   tableName: 'tabB',
-//   timeTag: '2022-03-02T14:41:08+08:00|LZmkJV',
+//   timeTag: '2022-03-02T15:09:46+08:00|2erDO0',
 //   data: 'table[tabB] = 1'
+// }
+// client: afterUpdateTableTags {
+//   oldTableTags: {
+//     tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
+//     tabB: '2022-03-02T15:09:46+08:00|2erDO0'
+//   },
+//   newTableTags: {
+//     tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
+//     tabB: '2022-03-02T15:09:46+08:00|2erDO0'
+//   }
 // }
 // i= 5
 // server: changeTableTags {
-//   tabA: '2022-03-02T14:41:10+08:00|NDGfpO',
-//   tabB: '2022-03-02T14:41:08+08:00|LZmkJV'
+//   tabA: '2022-03-02T15:09:47+08:00|zLYrCn',
+//   tabB: '2022-03-02T15:09:46+08:00|2erDO0'
 // }
 // i= 6
-// client: getAPITableTags before
-// client: getAPITableTags after:  {
-//   tabA: '2022-03-02T14:41:10+08:00|NDGfpO',
-//   tabB: '2022-03-02T14:41:08+08:00|LZmkJV'
-// }
-// client: refreshState needToRefresh true
-// client: getAPIData before: tabA
-// client: getAPIData after: table[tabA] = 2
-// client: getData {
-//   tableName: 'tabA',
-//   timeTag: '2022-03-02T14:41:10+08:00|NDGfpO',
-//   data: 'table[tabA] = 2'
-// }
+// client: afterPollingTableTags
 // i= 7
 
 //node --experimental-modules --es-module-specifier-resolution=node srvsclb.mjs
