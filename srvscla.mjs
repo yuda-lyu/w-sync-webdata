@@ -9,7 +9,9 @@ import WSyncWebdataClient from './src/WSyncWebdataClient.mjs'
 let ee = new events.EventEmitter()
 
 //wsds
-let wsds = new WSyncWebdataServer()
+let wsds = new WSyncWebdataServer({
+    // fnTableTags: 'tableTags-sync-webdata.json',
+})
 
 //tableTagsSrv
 let tableTagsSrv = {
