@@ -1,10 +1,12 @@
 import path from 'path'
 import fs from 'fs'
+import get from 'lodash/get'
 import debounce from 'lodash/debounce'
 import merge from 'lodash/merge'
 import now2str from 'wsemi/src/now2str.mjs'
 import genID from 'wsemi/src/genID.mjs'
 import evem from 'wsemi/src/evem.mjs'
+import isestr from 'wsemi/src/isestr.mjs'
 import iseobj from 'wsemi/src/iseobj.mjs'
 import j2o from 'wsemi/src/j2o.mjs'
 import o2j from 'wsemi/src/o2j.mjs'
@@ -26,14 +28,12 @@ function WSyncWebdataServer(opt = {}) {
     let nowTableTags = {}
 
 
-    //default
-    if (!opt.fnTableTags) {
-        opt.fnTableTags = 'tableTags.json'
-    }
-
-
     //fnTableTags
-    let fnTableTags = `${fdSrv}/${opt.fnTableTags}`
+    let fnTableTags = get(opt, 'fnTableTags')
+    if (!isestr(fnTableTags)) {
+        fnTableTags = 'tableTags.json'
+    }
+    fnTableTags = `${fdSrv}/${fnTableTags}`
 
 
     //ee
