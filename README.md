@@ -6,6 +6,7 @@ An operator for data synchronization between nodejs and browser.
 [![license](https://img.shields.io/npm/l/w-sync-webdata.svg?style=flat)](https://npmjs.org/package/w-sync-webdata) 
 [![gzip file size](http://img.badgesize.io/yuda-lyu/w-sync-webdata/master/dist/w-sync-webdata-server.umd.js.svg?compression=gzip)](https://github.com/yuda-lyu/w-sync-webdata)
 [![npm download](https://img.shields.io/npm/dt/w-sync-webdata.svg)](https://npmjs.org/package/w-sync-webdata) 
+[![npm download](https://img.shields.io/npm/dm/w-sync-webdata.svg)](https://npmjs.org/package/w-sync-webdata) 
 [![jsdelivr download](https://img.shields.io/jsdelivr/npm/hm/w-sync-webdata.svg)](https://www.jsdelivr.com/package/npm/w-sync-webdata)
 
 ## Documentation
@@ -18,7 +19,7 @@ To view documentation or get support, visit [docs](https://yuda-lyu.github.io/w-
 
 ## Installation
 ### Using npm(ES6 module):
-> **Note:** `w-sync-webdata-server` and `w-sync-webdata-client` is mainly dependent on `lodash` and `wsemi`.
+> **Note:** `w-sync-webdata-server` and `w-sync-webdata-client` is mainly dependent on `lodash-es` and `wsemi`.
 
 ```alias
 npm i w-sync-webdata

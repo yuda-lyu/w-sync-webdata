@@ -1,5 +1,5 @@
-import each from 'lodash/each'
-import cloneDeep from 'lodash/cloneDeep'
+import each from 'lodash-es/each'
+import cloneDeep from 'lodash-es/cloneDeep'
 import genPm from 'wsemi/src/genPm.mjs'
 import cint from 'wsemi/src/cint.mjs'
 import cbol from 'wsemi/src/cbol.mjs'
