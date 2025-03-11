@@ -10,7 +10,7 @@ let ee = new events.EventEmitter()
 
 //wsds
 let wsds = new WSyncWebdataServer({
-    // fnTableTags: 'tableTags-sync-webdata.json',
+    // fpTableTags: 'tableTags-sync-webdata.json',
 })
 
 //tableTagsSrv
@@ -67,8 +67,13 @@ async function getAPIData(tableName) {
 
 //-------- front-end ---------
 
+//optc
+let optc = {
+    usePollingTableTags: false,
+}
+
 //wsdc
-let wsdc = new WSyncWebdataClient()
+let wsdc = new WSyncWebdataClient(optc)
 
 //tableTagsCl
 let tableTagsCl = {
@@ -238,4 +243,4 @@ wsdc.on('error', (err) => {
 //   }
 // }
 
-//node --experimental-modules --es-module-specifier-resolution=node srvscla.mjs
+//node --experimental-modules srvscla.mjs

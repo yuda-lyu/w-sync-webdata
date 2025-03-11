@@ -1,16 +1,16 @@
 {
   "name": "w-sync-webdata",
-  "version": "1.0.22",
+  "version": "1.0.23",
   "main": "dist/w-sync-webdata-server.umd.js",
   "dependencies": {
     "lodash-es": "^4.17.21",
-    "wsemi": "^1.7.49"
+    "wsemi": "^1.7.70"
   },
   "devDependencies": {
-    "w-package-tools": "^1.0.75"
+    "w-package-tools": "^1.0.82"
   },
   "scripts": {
-    "test": "mocha --parallel --timeout 60000 --experimental-modules --es-module-specifier-resolution=node",
+    "test": "mocha --parallel --timeout 60000 --experimental-modules",
     "deploy": "gh-pages -d docs"
   },
   "repository": {

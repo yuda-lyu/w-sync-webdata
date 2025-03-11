@@ -79,7 +79,7 @@ async function getAPIData(tableName) {
 
 //optc
 let optc = {
-    usePollingTableTags: true, //Enable the polling the table timestamp.
+    usePollingTableTags: true,
 }
 
 //wsdc
@@ -291,4 +291,4 @@ wsdc.on('error', (err) => {
 // client: afterPollingTableTags
 // i= 7
 
-//node --experimental-modules --es-module-specifier-resolution=node srvsclb.mjs
+//node --experimental-modules srvsclb.mjs

@@ -1,4 +1,3 @@
-import path from 'path'
 import fs from 'fs'
 import get from 'lodash-es/get.js'
 import debounce from 'lodash-es/debounce.js'
@@ -12,33 +11,196 @@ import j2o from 'wsemi/src/j2o.mjs'
 import o2j from 'wsemi/src/o2j.mjs'
 
 
-let fdSrv = path.resolve()
-
-
 /**
  * 伺服器端之資料同步器
  *
  * @class
  * @param {Object} [opt={}] 輸入設定物件，預設{}
- * @param {Integer} [opt.fnTableTags='tableTags.json'] 輸入各資料表時間戳儲存檔案名稱字串，預設'tableTags.json'
+ * @param {String} [opt.fpTableTags='tableTags.json'] 輸入儲存各資料表時間戳檔案路徑串，預設'./tableTags.json'
  * @returns {Object} 回傳後端資料同步物件，可監聽事件changeTableTags、error，可使用函數readTableTags、writeTableTags、initTableTags、setTableTags、getTableTags、updateTableTag
  * @example
+ *
+ * import WSyncWebdataServer from './src/WSyncWebdataServer.mjs'
+ * import WSyncWebdataClient from './src/WSyncWebdataClient.mjs'
+ *
+ * //log time
+ * let i = 0
+ * console.log('i=', i)
+ * let ts = setInterval(() => {
+ *     i += 1
+ *     console.log('i=', i)
+ *     if (i >= 7) {
+ *         clearInterval(ts)
+ *     }
+ * }, 1000)
+ *
+ * //-------- back-end ---------
+ *
+ * //wsds
+ * let wsds = new WSyncWebdataServer()
+ *
+ * //tableTagsSrv
+ * let tableTagsSrv = {
+ *     tabA: '2020-01-01T00:00:00+08:00',
+ *     tabB: '2020-01-01T01:00:00+08:00',
+ * }
+ *
+ * //initTableTags
+ * wsds.initTableTags(tableTagsSrv)
+ *
+ * //readTableTags
+ * console.log('server: nowTableTags', wsds.readTableTags())
+ *
+ * //updateTableTag
+ * setTimeout(() => {
+ *     wsds.updateTableTag('tabA')
+ * }, 2400)
+ * setTimeout(() => {
+ *     wsds.updateTableTag('tabB')
+ * }, 3600)
+ * setTimeout(() => {
+ *     wsds.updateTableTag('tabA')
+ * }, 4800)
+ *
+ * //changeTableTags
+ * wsds.on('changeTableTags', (nowTableTags) => {
+ *     console.log('server: changeTableTags', nowTableTags)
+ *     //This example does not push to front-end, wait polling form the front-end.
+ * })
+ *
+ * //error
+ * wsds.on('error', (err) => {
+ *     console.log('server: error', err)
+ * })
+ *
+ * //getAPITableTags, Simulated back-end API for sending table timestamp.
+ * async function getAPITableTags() {
+ *     return new Promise((resolve, reject) => {
+ *         setTimeout(() => {
+ *             resolve(wsds.getTableTags())
+ *         }, 100)
+ *     })
+ * }
+ *
+ * //getAPIData, Simulated back-end API for sending table data.
+ * let tabsCount = {
+ *     tabA: 0,
+ *     tabB: 0,
+ * }
+ * async function getAPIData(tableName) {
+ *     return new Promise((resolve, reject) => {
+ *         setTimeout(() => {
+ *             tabsCount[tableName] += 1
+ *             resolve(`table[${tableName}] = ${tabsCount[tableName]}`)
+ *         }, 100)
+ *     })
+ * }
+ *
+ * //-------- front-end ---------
+ *
+ * //optc
+ * let optc = {
+ *     usePollingTableTags: true,
+ * }
+ *
+ * //wsdc
+ * let wsdc = new WSyncWebdataClient(optc)
+ *
+ * //tableTagsCl
+ * let tableTagsCl = {
+ *     tabA: '2020-01-01T00:00:00+08:00',
+ *     tabB: '2020-01-01T01:00:00+08:00',
+ * }
+ *
+ * //setTableTags, Loaded tableTags directly if cache (cookie or localStorage) is available in front-end.
+ * wsdc.setTableTags(tableTagsCl)
+ *
+ * //Simulate mouseover event of front-end in node.js, and call pollingTableTags for triggering.
+ * let n = 0
+ * let t = setInterval(() => {
+ *     n += 1
+ *     wsdc.pollingTableTags()
+ *     if (n >= 65) {
+ *         clearInterval(t)
+ *     }
+ * }, 100)
+ *
+ * //refreshTags
+ * wsdc.on('refreshTags', ({ pm }) => {
+ *     //console.log('client: refreshTags')
+ *
+ *     //getAPITableTags
+ *     console.log('client: getAPITableTags before')
+ *     getAPITableTags()
+ *         .then((nowTableTags) => {
+ *             console.log('client: getAPITableTags after: ', nowTableTags)
+ *             pm.resolve(nowTableTags)
+ *         })
+ *         .catch((err) => {
+ *             pm.reject(err)
+ *         })
+ *
+ * })
+ *
+ * //refreshState
+ * wsdc.on('refreshState', (msg) => {
+ *     console.log('client: refreshState needToRefresh', msg.needToRefresh)
+ * })
+ *
+ * //refreshTable
+ * wsdc.on('refreshTable', (input) => {
+ *     //console.log('client: refreshTable', input)
+ *
+ *     //Call API when receiving an updating tableTags of event.
+ *     console.log('client: getAPIData before: ' + input.tableName)
+ *     getAPIData(input.tableName)
+ *         .then((data) => {
+ *             console.log('client: getAPIData after: ' + data)
+ *             input.pm.resolve(data) //Use pm.resolve to retrieve the data, and pm.reject the message when get an error.
+ *         })
+ *         .catch((err) => {
+ *             input.pm.reject(err)
+ *         })
+ *
+ * })
+ *
+ * //getData
+ * wsdc.on('getData', (data) => {
+ *     console.log('client: getData', data)
+ *     //Update data, save or transfer it to vuex etc.
+ * })
+ *
+ * //beforeUpdateTableTags, afterUpdateTableTags, beforePollingTableTags, afterPollingTableTags
+ * wsdc.on('beforeUpdateTableTags', (msg) => {
+ *     console.log('client: beforeUpdateTableTags', msg)
+ * })
+ * wsdc.on('afterUpdateTableTags', (msg) => {
+ *     console.log('client: afterUpdateTableTags', msg)
+ * })
+ * wsdc.on('beforePollingTableTags', () => {
+ *     console.log('client: beforePollingTableTags')
+ * })
+ * wsdc.on('afterPollingTableTags', () => {
+ *     console.log('client: afterPollingTableTags')
+ * })
+ *
+ * //error
+ * wsdc.on('error', (err) => {
+ *     console.log('client: error', err)
+ * })
+ *
  */
 function WSyncWebdataServer(opt = {}) {
     let nowTableTags = {}
 
-
-    //fnTableTags
-    let fnTableTags = get(opt, 'fnTableTags')
-    if (!isestr(fnTableTags)) {
-        fnTableTags = 'tableTags.json'
+    //fpTableTags
+    let fpTableTags = get(opt, 'fpTableTags', '')
+    if (!isestr(fpTableTags)) {
+        fpTableTags = './tableTags.json'
     }
-    fnTableTags = `${fdSrv}/${fnTableTags}`
-
 
     //ee
     let ee = evem()
-
 
     //eeEmit
     function eeEmit(name, ...args) {
@@ -46,7 +208,6 @@ function WSyncWebdataServer(opt = {}) {
             ee.emit(name, ...args)
         }, 1)
     }
-
 
     /**
      * 讀取各資料表時間資料
@@ -59,8 +220,8 @@ function WSyncWebdataServer(opt = {}) {
     function readTableTags() {
         let r = {}
         try {
-            if (fs.existsSync(fnTableTags)) {
-                let c = fs.readFileSync(fnTableTags, 'utf8')
+            if (fs.existsSync(fpTableTags)) {
+                let c = fs.readFileSync(fpTableTags, 'utf8')
                 let o = j2o(c)
                 if (iseobj(o)) {
                     r = o
@@ -76,7 +237,6 @@ function WSyncWebdataServer(opt = {}) {
         return r
     }
 
-
     /**
      * 儲存各資料表時間資料
      *
@@ -90,7 +250,7 @@ function WSyncWebdataServer(opt = {}) {
     function writeTableTags() {
         try {
             let c = o2j(nowTableTags)
-            fs.writeFileSync(fnTableTags, c, 'utf8')
+            fs.writeFileSync(fpTableTags, c, 'utf8')
         }
         catch (err) {
             eeEmit('error', {
@@ -99,7 +259,6 @@ function WSyncWebdataServer(opt = {}) {
             })
         }
     }
-
 
     /**
      * 初始化各資料表時間資料
@@ -140,7 +299,6 @@ function WSyncWebdataServer(opt = {}) {
 
     }
 
-
     /**
      * 直接設定各資料表時間資料
      *
@@ -161,7 +319,6 @@ function WSyncWebdataServer(opt = {}) {
 
     }
 
-
     /**
      * 直接取得各資料表時間資料
      *
@@ -174,7 +331,6 @@ function WSyncWebdataServer(opt = {}) {
         return nowTableTags
     }
 
-
     //updateTableTagCore, 避免大量更新時造成大量推播, 通過debounce合併故是回傳nowTableTags
     let updateTableTagCore = debounce(() => {
 
@@ -185,7 +341,6 @@ function WSyncWebdataServer(opt = {}) {
         eeEmit('changeTableTags', nowTableTags)
 
     }, 200)
-
 
     /**
      * 更新指定資料表之時間戳，當資料表更新時需調用此函數
@@ -207,7 +362,6 @@ function WSyncWebdataServer(opt = {}) {
 
     }
 
-
     /**
      * 監聽更新資料表事件，當外部監聽收到更新通知時再推播nowTableTags至前端
      *
@@ -220,13 +374,14 @@ function WSyncWebdataServer(opt = {}) {
      */
     function onChangeUpdateTableTag() {} onChangeUpdateTableTag()
 
-
+    //save
     ee.readTableTags = readTableTags
     ee.writeTableTags = writeTableTags
     ee.initTableTags = initTableTags
     ee.setTableTags = setTableTags
     ee.getTableTags = getTableTags
     ee.updateTableTag = updateTableTag
+
     return ee
 }
 
