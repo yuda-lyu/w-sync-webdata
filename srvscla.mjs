@@ -153,9 +153,6 @@ wsdc.on('error', (err) => {
 //   tabB: '2020-01-01T01:00:00+08:00'
 // }
 // server: changeTableTags {
-//   tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
-//   tabB: '2020-01-01T01:00:00+08:00'
-// }
 // server: push
 // client: beforeUpdateTableTags {
 //   oldTableTags: {
@@ -163,7 +160,7 @@ wsdc.on('error', (err) => {
 //     tabB: '2020-01-01T01:00:00+08:00'
 //   },
 //   newTableTags: {
-//     tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
+//     tabA: '2025-03-20T22:15:04+08:00|rmosrm',
 //     tabB: '2020-01-01T01:00:00+08:00'
 //   }
 // }
@@ -172,32 +169,32 @@ wsdc.on('error', (err) => {
 // client: getAPIData after: table[tabA] = 1
 // client: getData {
 //   tableName: 'tabA',
-//   timeTag: '2022-03-02T15:07:43+08:00|pDTyK1',
+//   timeTag: '2025-03-20T22:15:04+08:00|rmosrm',
 //   data: 'table[tabA] = 1'
 // }
 // client: afterUpdateTableTags {
 //   oldTableTags: {
-//     tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
+//     tabA: '2025-03-20T22:15:04+08:00|rmosrm',
 //     tabB: '2020-01-01T01:00:00+08:00'
 //   },
 //   newTableTags: {
-//     tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
-//     tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//     tabA: '2025-03-20T22:15:04+08:00|rmosrm',
+//     tabB: '2025-03-20T22:15:04+08:00|GZG17t'
 //   }
 // }
 // server: changeTableTags {
-//   tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
-//   tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//   tabA: '2025-03-20T22:15:04+08:00|rmosrm',
+//   tabB: '2025-03-20T22:15:04+08:00|GZG17t'
 // }
 // server: push
 // client: beforeUpdateTableTags {
 //   oldTableTags: {
-//     tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
+//     tabA: '2025-03-20T22:15:04+08:00|rmosrm',
 //     tabB: '2020-01-01T01:00:00+08:00'
 //   },
 //   newTableTags: {
-//     tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
-//     tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//     tabA: '2025-03-20T22:15:04+08:00|rmosrm',
+//     tabB: '2025-03-20T22:15:04+08:00|GZG17t'
 //   }
 // }
 // client: refreshState needToRefresh true
@@ -205,32 +202,32 @@ wsdc.on('error', (err) => {
 // client: getAPIData after: table[tabB] = 1
 // client: getData {
 //   tableName: 'tabB',
-//   timeTag: '2022-03-02T15:07:43+08:00|Hkt6GZ',
+//   timeTag: '2025-03-20T22:15:04+08:00|GZG17t',
 //   data: 'table[tabB] = 1'
 // }
 // client: afterUpdateTableTags {
 //   oldTableTags: {
-//     tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
-//     tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//     tabA: '2025-03-20T22:15:04+08:00|rmosrm',
+//     tabB: '2025-03-20T22:15:04+08:00|GZG17t'
 //   },
 //   newTableTags: {
-//     tabA: '2022-03-02T15:07:43+08:00|DUZiKH',
-//     tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//     tabA: '2025-03-20T22:15:05+08:00|RgA22k',
+//     tabB: '2025-03-20T22:15:04+08:00|GZG17t'
 //   }
 // }
 // server: changeTableTags {
-//   tabA: '2022-03-02T15:07:43+08:00|DUZiKH',
-//   tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//   tabA: '2025-03-20T22:15:05+08:00|RgA22k',
+//   tabB: '2025-03-20T22:15:04+08:00|GZG17t'
 // }
 // server: push
 // client: beforeUpdateTableTags {
 //   oldTableTags: {
-//     tabA: '2022-03-02T15:07:43+08:00|pDTyK1',
-//     tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//     tabA: '2025-03-20T22:15:04+08:00|rmosrm',
+//     tabB: '2025-03-20T22:15:04+08:00|GZG17t'
 //   },
 //   newTableTags: {
-//     tabA: '2022-03-02T15:07:43+08:00|DUZiKH',
-//     tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//     tabA: '2025-03-20T22:15:05+08:00|RgA22k',
+//     tabB: '2025-03-20T22:15:04+08:00|GZG17t'
 //   }
 // }
 // client: refreshState needToRefresh true
@@ -238,17 +235,17 @@ wsdc.on('error', (err) => {
 // client: getAPIData after: table[tabA] = 2
 // client: getData {
 //   tableName: 'tabA',
-//   timeTag: '2022-03-02T15:07:43+08:00|DUZiKH',
+//   timeTag: '2025-03-20T22:15:05+08:00|RgA22k',
 //   data: 'table[tabA] = 2'
 // }
 // client: afterUpdateTableTags {
 //   oldTableTags: {
-//     tabA: '2022-03-02T15:07:43+08:00|DUZiKH',
-//     tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//     tabA: '2025-03-20T22:15:05+08:00|RgA22k',
+//     tabB: '2025-03-20T22:15:04+08:00|GZG17t'
 //   },
 //   newTableTags: {
-//     tabA: '2022-03-02T15:07:43+08:00|DUZiKH',
-//     tabB: '2022-03-02T15:07:43+08:00|Hkt6GZ'
+//     tabA: '2025-03-20T22:15:05+08:00|RgA22k',
+//     tabB: '2025-03-20T22:15:04+08:00|GZG17t'
 //   }
 // }
 

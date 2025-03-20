@@ -213,7 +213,7 @@ wsdc.on('error', (err) => {
 // client: beforePollingTableTags
 // client: getAPITableTags before
 // client: getAPITableTags after:  {
-//   tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
+//   tabA: '2025-03-20T22:16:19+08:00|bBHGRS',
 //   tabB: '2020-01-01T01:00:00+08:00'
 // }
 // client: beforeUpdateTableTags {
@@ -222,7 +222,7 @@ wsdc.on('error', (err) => {
 //     tabB: '2020-01-01T01:00:00+08:00'
 //   },
 //   newTableTags: {
-//     tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
+//     tabA: '2025-03-20T22:16:19+08:00|bBHGRS',
 //     tabB: '2020-01-01T01:00:00+08:00'
 //   }
 // }
@@ -231,44 +231,44 @@ wsdc.on('error', (err) => {
 // client: getAPIData after: table[tabA] = 1
 // client: getData {
 //   tableName: 'tabA',
-//   timeTag: '2022-03-02T15:09:45+08:00|0M4atZ',
+//   timeTag: '2025-03-20T22:16:19+08:00|bBHGRS',
 //   data: 'table[tabA] = 1'
 // }
 // client: afterUpdateTableTags {
 //   oldTableTags: {
-//     tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
+//     tabA: '2025-03-20T22:16:19+08:00|bBHGRS',
 //     tabB: '2020-01-01T01:00:00+08:00'
 //   },
 //   newTableTags: {
-//     tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
+//     tabA: '2025-03-20T22:16:19+08:00|bBHGRS',
 //     tabB: '2020-01-01T01:00:00+08:00'
 //   }
 // }
 // server: changeTableTags {
-//   tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
+//   tabA: '2025-03-20T22:16:19+08:00|bBHGRS',
 //   tabB: '2020-01-01T01:00:00+08:00'
 // }
 // i= 3
 // server: changeTableTags {
-//   tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
-//   tabB: '2022-03-02T15:09:46+08:00|2erDO0'
+//   tabA: '2025-03-20T22:16:19+08:00|bBHGRS',
+//   tabB: '2025-03-20T22:16:20+08:00|gTuWaz'
 // }
 // i= 4
 // client: afterPollingTableTags
 // client: beforePollingTableTags
 // client: getAPITableTags before
 // client: getAPITableTags after:  {
-//   tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
-//   tabB: '2022-03-02T15:09:46+08:00|2erDO0'
+//   tabA: '2025-03-20T22:16:19+08:00|bBHGRS',
+//   tabB: '2025-03-20T22:16:20+08:00|gTuWaz'
 // }
 // client: beforeUpdateTableTags {
 //   oldTableTags: {
-//     tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
+//     tabA: '2025-03-20T22:16:19+08:00|bBHGRS',
 //     tabB: '2020-01-01T01:00:00+08:00'
 //   },
 //   newTableTags: {
-//     tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
-//     tabB: '2022-03-02T15:09:46+08:00|2erDO0'
+//     tabA: '2025-03-20T22:16:19+08:00|bBHGRS',
+//     tabB: '2025-03-20T22:16:20+08:00|gTuWaz'
 //   }
 // }
 // client: refreshState needToRefresh true
@@ -276,27 +276,69 @@ wsdc.on('error', (err) => {
 // client: getAPIData after: table[tabB] = 1
 // client: getData {
 //   tableName: 'tabB',
-//   timeTag: '2022-03-02T15:09:46+08:00|2erDO0',
+//   timeTag: '2025-03-20T22:16:20+08:00|gTuWaz',
 //   data: 'table[tabB] = 1'
 // }
 // client: afterUpdateTableTags {
 //   oldTableTags: {
-//     tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
-//     tabB: '2022-03-02T15:09:46+08:00|2erDO0'
+//     tabA: '2025-03-20T22:16:19+08:00|bBHGRS',
+//     tabB: '2025-03-20T22:16:20+08:00|gTuWaz'
 //   },
 //   newTableTags: {
-//     tabA: '2022-03-02T15:09:45+08:00|0M4atZ',
-//     tabB: '2022-03-02T15:09:46+08:00|2erDO0'
+//     tabA: '2025-03-20T22:16:22+08:00|cEJIET',
+//     tabB: '2025-03-20T22:16:20+08:00|gTuWaz'
 //   }
 // }
-// i= 5
 // server: changeTableTags {
-//   tabA: '2022-03-02T15:09:47+08:00|zLYrCn',
-//   tabB: '2022-03-02T15:09:46+08:00|2erDO0'
+//   tabA: '2025-03-20T22:16:22+08:00|cEJIET',
+//   tabB: '2025-03-20T22:16:20+08:00|gTuWaz'
 // }
+// i= 5
 // i= 6
 // client: afterPollingTableTags
+// client: beforePollingTableTags
+// client: getAPITableTags before
+// client: getAPITableTags after:  {
+//   tabA: '2025-03-20T22:16:22+08:00|cEJIET',
+//   tabB: '2025-03-20T22:16:20+08:00|gTuWaz'
+// }
+// client: beforeUpdateTableTags {
+//   oldTableTags: {
+//     tabA: '2025-03-20T22:16:19+08:00|bBHGRS',
+//     tabB: '2025-03-20T22:16:20+08:00|gTuWaz'
+//   },
+//   newTableTags: {
+//     tabA: '2025-03-20T22:16:22+08:00|cEJIET',
+//     tabB: '2025-03-20T22:16:20+08:00|gTuWaz'
+//   }
+// }
+// client: refreshState needToRefresh true
+// client: getAPIData before: tabA
 // i= 7
+// client: getAPIData after: table[tabA] = 2
+// client: getData {
+//   tableName: 'tabA',
+// client: getAPIData after: table[tabA] = 2
+// client: getData {
+//   tableName: 'tabA',
+// client: getData {
+//   tableName: 'tabA',
+//   tableName: 'tabA',
+//   timeTag: '2025-03-20T22:16:22+08:00|cEJIET',
+//   timeTag: '2025-03-20T22:16:22+08:00|cEJIET',
+//   data: 'table[tabA] = 2'
+// }
+// client: afterUpdateTableTags {
+//   oldTableTags: {
+//     tabA: '2025-03-20T22:16:22+08:00|cEJIET',
+//     tabB: '2025-03-20T22:16:20+08:00|gTuWaz'
+//   },
+//   newTableTags: {
+//     tabA: '2025-03-20T22:16:22+08:00|cEJIET',
+//     tabB: '2025-03-20T22:16:20+08:00|gTuWaz'
+//   }
+// }
+// client: afterPollingTableTags
 
 
 //node --experimental-modules srvsclb.mjs
