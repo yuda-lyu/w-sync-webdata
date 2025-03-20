@@ -2,21 +2,24 @@ import get from 'lodash-es/get.js'
 import each from 'lodash-es/each.js'
 import cloneDeep from 'lodash-es/cloneDeep.js'
 import genPm from 'wsemi/src/genPm.mjs'
+import evem from 'wsemi/src/evem.mjs'
+import haskey from 'wsemi/src/haskey.mjs'
 import isbol from 'wsemi/src/isbol.mjs'
 import ispint from 'wsemi/src/ispint.mjs'
+import iseobj from 'wsemi/src/iseobj.mjs'
 import cint from 'wsemi/src/cint.mjs'
 import delay from 'wsemi/src/delay.mjs'
-import evem from 'wsemi/src/evem.mjs'
 
 
 /**
  * 瀏覽器端之資料同步器
  *
  * @class
+ * @param {Object} instWConverClient 輸入通訊服務實體物件，可使用例如WConverhpClient等建立
  * @param {Object} [opt={}] 輸入設定物件，預設{}
- * @param {Boolean} [opt.usePollingTableTags=false] 輸入是否用前端輪詢取得各資料表時間戳布林值，預設false
- * @param {Integer} [opt.pollingIntervalTime=2000] 輸入每次輪詢間隔之最小毫秒整數，預設2000
- * @returns {Object} 回傳前端資料同步物件，可監聽事件refreshTags、refreshState、refreshTable、getData、error，可使用函數updateTableTags、pollingTableTags
+ * @param {Boolean} [opt.autoPollingTableTagsForActive=false] 輸入是否當使用者活躍時自動進行輪詢布林值，預設false
+ * @param {Integer} [opt.pollingIntervalTime=2000] 輸入輪詢強制延遲時間整數，單位ms，預設2000
+ * @returns {Object} 回傳前端資料同步物件，可監聽事件refreshTags、refreshState、refreshTable、getData、error，可使用函數setTableTags、updateTableTags、pollingTableTags
  * @example
  *
  * import WSyncWebdataServer from './src/WSyncWebdataServer.mjs'
@@ -99,7 +102,7 @@ import evem from 'wsemi/src/evem.mjs'
  *
  * //optc
  * let optc = {
- *     usePollingTableTags: true,
+ *     autoPollingTableTagsForActive: true,
  * }
  *
  * //wsdc
@@ -189,14 +192,23 @@ import evem from 'wsemi/src/evem.mjs'
  * })
  *
  */
-function WSyncWebdataClient(opt = {}) {
+function WSyncWebdataClient(initWConverhpClient, opt = {}) {
     let nowTableTags = {}
     let isPolling = false
 
-    //usePollingTableTags
-    let usePollingTableTags = get(opt, 'usePollingTableTags')
-    if (!isbol(usePollingTableTags)) {
-        usePollingTableTags = false
+    //check
+    if (!iseobj(initWConverhpClient)) {
+        console.log('initWConverhpClient is not an effective object, and set initWConverhpClient to an EventEmitter')
+        initWConverhpClient = evem()
+    }
+    if (!haskey(initWConverhpClient, 'emit')) {
+        throw new Error(`initWConverhpClient is not an EventEmitter`)
+    }
+
+    //autoPollingTableTagsForActive
+    let autoPollingTableTagsForActive = get(opt, 'autoPollingTableTagsForActive')
+    if (!isbol(autoPollingTableTagsForActive)) {
+        autoPollingTableTagsForActive = false
     }
 
     //pollingIntervalTime
@@ -210,7 +222,7 @@ function WSyncWebdataClient(opt = {}) {
     let ee = evem()
 
     //eeEmit
-    function eeEmit(name, ...args) {
+    let eeEmit = (name, ...args) => {
         setTimeout(() => {
             ee.emit(name, ...args)
         }, 1)
@@ -222,8 +234,10 @@ function WSyncWebdataClient(opt = {}) {
      * @memberof WSyncWebdataClient
      * @param {Object} tableTags 輸入各資料表時間戳物件
      * @example
+     *
      * let tableTags = {...}
      * wsdc.setTableTags(tableTags)
+     *
      */
     function setTableTags(tableTags = {}) {
         nowTableTags = tableTags
@@ -235,8 +249,10 @@ function WSyncWebdataClient(opt = {}) {
      * @memberof WSyncWebdataClient
      * @param {Object} tableTags 輸入各資料表時間戳物件
      * @example
+     *
      * let tableTags = {...}
      * wsdc.updateTableTags(tableTags)
+     *
      */
     async function updateTableTags(tableTags = {}) {
         let pms = []
@@ -330,7 +346,9 @@ function WSyncWebdataClient(opt = {}) {
      *
      * @memberof WSyncWebdataClient
      * @example
+     *
      * wsdc.pollingTableTags()
+     *
      */
     async function pollingTableTags() {
 
@@ -369,7 +387,7 @@ function WSyncWebdataClient(opt = {}) {
 
         }
 
-        //延遲pollingIntervalTime毫秒
+        //強制延遲
         await delay(pollingIntervalTime)
 
         //emit
@@ -381,11 +399,14 @@ function WSyncWebdataClient(opt = {}) {
     }
 
     //pollingTableTags
-    if (usePollingTableTags) {
+    if (autoPollingTableTagsForActive) {
 
         //mouseover
         if (typeof window !== 'undefined') {
             window.addEventListener('mouseover', (e) => {
+                pollingTableTags()
+            }, false)
+            window.addEventListener('touchmove', (e) => {
                 pollingTableTags()
             }, false)
         }
