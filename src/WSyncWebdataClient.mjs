@@ -18,7 +18,7 @@ import delay from 'wsemi/src/delay.mjs'
  * @param {Object} instWConverClient 輸入通訊服務實體物件，可使用例如WConverhpClient等建立
  * @param {Object} [opt={}] 輸入設定物件，預設{}
  * @param {Boolean} [opt.autoPollingTableTagsForActive=false] 輸入是否當使用者活躍時自動進行輪詢布林值，預設false
- * @param {Integer} [opt.pollingIntervalTime=2000] 輸入輪詢強制延遲時間整數，單位ms，預設2000
+ * @param {Integer} [opt.pollingDelayTime=2000] 輸入輪詢強制延遲時間整數，單位ms，預設2000
  * @returns {Object} 回傳前端資料同步物件，可監聽事件refreshTags、refreshState、refreshTable、getData、error，可使用函數setTableTags、updateTableTags、pollingTableTags
  * @example
  *
@@ -211,12 +211,12 @@ function WSyncWebdataClient(initWConverhpClient, opt = {}) {
         autoPollingTableTagsForActive = false
     }
 
-    //pollingIntervalTime
-    let pollingIntervalTime = get(opt, 'pollingIntervalTime')
-    if (!ispint(pollingIntervalTime)) {
-        pollingIntervalTime = 2000
+    //pollingDelayTime
+    let pollingDelayTime = get(opt, 'pollingDelayTime')
+    if (!ispint(pollingDelayTime)) {
+        pollingDelayTime = 2000
     }
-    pollingIntervalTime = cint(pollingIntervalTime)
+    pollingDelayTime = cint(pollingDelayTime)
 
     //ee
     let ee = evem()
@@ -388,7 +388,7 @@ function WSyncWebdataClient(initWConverhpClient, opt = {}) {
         }
 
         //強制延遲
-        await delay(pollingIntervalTime)
+        await delay(pollingDelayTime)
 
         //emit
         eeEmit('afterPollingTableTags')
