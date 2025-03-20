@@ -1,4 +1,4 @@
-import events from 'events'
+import w from 'wsemi'
 import WSyncWebdataServer from './src/WSyncWebdataServer.mjs'
 import WSyncWebdataClient from './src/WSyncWebdataClient.mjs'
 
@@ -6,12 +6,18 @@ import WSyncWebdataClient from './src/WSyncWebdataClient.mjs'
 //-------- back-end ---------
 
 //EventEmitter, Simulated back-end push notification to front-end.
-let ee = new events.EventEmitter()
+let ee = w.evem()
+
+//instWConverServer
+let instWConverServer = w.evem()
 
 //wsds
-let wsds = new WSyncWebdataServer({
-    // fpTableTags: 'tableTags-sync-webdata.json',
-})
+let wsds = new WSyncWebdataServer(
+    instWConverServer,
+    {
+        // fpTableTags: 'tableTags-sync-webdata.json',
+    },
+)
 
 //tableTagsSrv
 let tableTagsSrv = {
@@ -67,13 +73,16 @@ async function getAPIData(tableName) {
 
 //-------- front-end ---------
 
+//instWConverClient
+let instWConverClient = w.evem()
+
 //optc
 let optc = {
     usePollingTableTags: false,
 }
 
 //wsdc
-let wsdc = new WSyncWebdataClient(optc)
+let wsdc = new WSyncWebdataClient(instWConverClient, optc)
 
 //tableTagsCl
 let tableTagsCl = {

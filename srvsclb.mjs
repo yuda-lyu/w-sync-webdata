@@ -1,3 +1,4 @@
+import w from 'wsemi'
 import WSyncWebdataServer from './src/WSyncWebdataServer.mjs'
 import WSyncWebdataClient from './src/WSyncWebdataClient.mjs'
 
@@ -15,8 +16,11 @@ let ts = setInterval(() => {
 
 //-------- back-end ---------
 
+//instWConverServer
+let instWConverServer = w.evem()
+
 //wsds
-let wsds = new WSyncWebdataServer()
+let wsds = new WSyncWebdataServer(instWConverServer, {})
 
 //tableTagsSrv
 let tableTagsSrv = {
@@ -77,13 +81,16 @@ async function getAPIData(tableName) {
 
 //-------- front-end ---------
 
+//instWConverClient
+let instWConverClient = w.evem()
+
 //optc
 let optc = {
     usePollingTableTags: true,
 }
 
 //wsdc
-let wsdc = new WSyncWebdataClient(optc)
+let wsdc = new WSyncWebdataClient(instWConverClient, optc)
 
 //tableTagsCl
 let tableTagsCl = {
