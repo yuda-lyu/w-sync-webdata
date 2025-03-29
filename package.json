@@ -1,6 +1,6 @@
 {
   "name": "w-sync-webdata",
-  "version": "1.0.26",
+  "version": "1.0.27",
   "main": "dist/w-sync-webdata-server.umd.js",
   "dependencies": {
     "lodash-es": "^4.17.21",
@@ -22,9 +22,6 @@
     "tool",
     "operator",
     "synchronization",
-    "w-converhp",
-    "w-conversi",
-    "w-converws",
     "nodejs",
     "browser"
   ],

@@ -104,17 +104,17 @@ import delay from 'wsemi/src/delay.mjs'
  * })
  *
  */
-function WSyncWebdataClient(initWConverhpClient, opt = {}) {
+function WSyncWebdataClient(initWConverClient, opt = {}) {
     let nowTableTags = {}
     let isPolling = false
 
     //check
-    if (!iseobj(initWConverhpClient)) {
-        console.log('initWConverhpClient is not an effective object, and set initWConverhpClient to an EventEmitter')
-        initWConverhpClient = evem()
+    if (!iseobj(initWConverClient)) {
+        console.log('initWConverClient is not an effective object, and set initWConverClient to an EventEmitter')
+        initWConverClient = evem()
     }
-    if (!haskey(initWConverhpClient, 'emit')) {
-        throw new Error(`initWConverhpClient is not an EventEmitter`)
+    if (!haskey(initWConverClient, 'emit')) {
+        throw new Error(`initWConverClient is not an EventEmitter`)
     }
 
     //autoPollingTableTagsForActive
@@ -130,13 +130,10 @@ function WSyncWebdataClient(initWConverhpClient, opt = {}) {
     }
     pollingDelayTime = cint(pollingDelayTime)
 
-    //ee
-    let ee = evem()
-
     //eeEmit
     let eeEmit = (name, ...args) => {
         setTimeout(() => {
-            ee.emit(name, ...args)
+            initWConverClient.emit(name, ...args)
         }, 1)
     }
 
@@ -326,11 +323,11 @@ function WSyncWebdataClient(initWConverhpClient, opt = {}) {
     }
 
     //save
-    ee.setTableTags = setTableTags
-    ee.updateTableTags = updateTableTags
-    ee.pollingTableTags = pollingTableTags
+    initWConverClient.setTableTags = setTableTags
+    initWConverClient.updateTableTags = updateTableTags
+    initWConverClient.pollingTableTags = pollingTableTags
 
-    return ee
+    return initWConverClient
 }
 
 
