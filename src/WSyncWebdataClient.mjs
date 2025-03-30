@@ -104,23 +104,23 @@ import delay from 'wsemi/src/delay.mjs'
  * })
  *
  */
-function WSyncWebdataClient(initWConverClient, opt = {}) {
+function WSyncWebdataClient(instWConverClient, opt = {}) {
     let nowTableTags = {}
     let isPolling = false
 
     //check
-    if (!iseobj(initWConverClient)) {
-        console.log('initWConverClient is not an effective object, and set initWConverClient to an EventEmitter')
-        initWConverClient = evem()
+    if (!iseobj(instWConverClient)) {
+        console.log('instWConverClient is not an effective object, and set instWConverClient to an EventEmitter')
+        instWConverClient = evem()
     }
-    if (!haskey(initWConverClient, 'emit')) {
-        throw new Error(`initWConverClient is not an EventEmitter`)
+    if (!haskey(instWConverClient, 'emit')) {
+        throw new Error(`instWConverClient is not an EventEmitter`)
     }
 
     //autoPollingTableTagsForActive
     let autoPollingTableTagsForActive = get(opt, 'autoPollingTableTagsForActive')
     if (!isbol(autoPollingTableTagsForActive)) {
-        autoPollingTableTagsForActive = false
+        autoPollingTableTagsForActive = false //若使用後端broadcast就不用自動輪循
     }
 
     //pollingDelayTime
@@ -133,7 +133,7 @@ function WSyncWebdataClient(initWConverClient, opt = {}) {
     //eeEmit
     let eeEmit = (name, ...args) => {
         setTimeout(() => {
-            initWConverClient.emit(name, ...args)
+            instWConverClient.emit(name, ...args)
         }, 1)
     }
 
@@ -323,11 +323,11 @@ function WSyncWebdataClient(initWConverClient, opt = {}) {
     }
 
     //save
-    initWConverClient.setTableTags = setTableTags
-    initWConverClient.updateTableTags = updateTableTags
-    initWConverClient.pollingTableTags = pollingTableTags
+    instWConverClient.setTableTags = setTableTags
+    instWConverClient.updateTableTags = updateTableTags
+    instWConverClient.pollingTableTags = pollingTableTags
 
-    return initWConverClient
+    return instWConverClient
 }
 
 
