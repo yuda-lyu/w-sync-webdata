@@ -1,6 +1,6 @@
 {
   "name": "w-sync-webdata",
-  "version": "1.0.30",
+  "version": "1.0.31",
   "main": "dist/w-sync-webdata-server.umd.js",
   "dependencies": {
     "lodash-es": "^4.17.21",
