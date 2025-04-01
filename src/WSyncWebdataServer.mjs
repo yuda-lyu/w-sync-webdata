@@ -5,7 +5,6 @@ import merge from 'lodash-es/merge.js'
 import now2str from 'wsemi/src/now2str.mjs'
 import genID from 'wsemi/src/genID.mjs'
 import evem from 'wsemi/src/evem.mjs'
-import haskey from 'wsemi/src/haskey.mjs'
 import isestr from 'wsemi/src/isestr.mjs'
 import iseobj from 'wsemi/src/iseobj.mjs'
 import isfun from 'wsemi/src/isfun.mjs'
@@ -241,7 +240,7 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
         console.log('instWConverServer is not an effective object, and set instWConverServer to an EventEmitter')
         instWConverServer = evem()
     }
-    if (!haskey(instWConverServer, 'emit')) {
+    if (!instWConverServer.emit) {
         throw new Error(`instWConverServer is not an EventEmitter`)
     }
 

@@ -3,7 +3,6 @@ import each from 'lodash-es/each.js'
 import cloneDeep from 'lodash-es/cloneDeep.js'
 import genPm from 'wsemi/src/genPm.mjs'
 import evem from 'wsemi/src/evem.mjs'
-import haskey from 'wsemi/src/haskey.mjs'
 import isbol from 'wsemi/src/isbol.mjs'
 import ispint from 'wsemi/src/ispint.mjs'
 import iseobj from 'wsemi/src/iseobj.mjs'
@@ -241,7 +240,7 @@ function WSyncWebdataClient(instWConverClient, opt = {}) {
         console.log('instWConverClient is not an effective object, and set instWConverClient to an EventEmitter')
         instWConverClient = evem()
     }
-    if (!haskey(instWConverClient, 'emit')) {
+    if (!instWConverClient.emit) {
         throw new Error(`instWConverClient is not an EventEmitter`)
     }
 
