@@ -1,13 +1,13 @@
 {
   "name": "w-sync-webdata",
-  "version": "1.0.31",
+  "version": "1.0.32",
   "main": "dist/w-sync-webdata-server.umd.js",
   "dependencies": {
     "lodash-es": "^4.17.21",
-    "wsemi": "^1.7.74"
+    "wsemi": "^1.7.75"
   },
   "devDependencies": {
-    "w-package-tools": "^1.0.85"
+    "w-package-tools": "^1.0.87"
   },
   "scripts": {
     "test": "mocha --parallel --timeout 60000 --experimental-modules",
