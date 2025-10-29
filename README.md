@@ -17,6 +17,7 @@ To view documentation or get support, visit [docs](https://yuda-lyu.github.io/w-
 * `w-sync-webdata-client`: for nodejs and browser client
 
 ## Installation
+
 ### Using npm(ES6 module):
 ```alias
 npm i w-sync-webdata
