@@ -1,9 +1,9 @@
 {
   "name": "w-sync-webdata",
-  "version": "1.0.58",
+  "version": "1.0.59",
   "main": "dist/w-sync-webdata-server.umd.js",
   "dependencies": {
-    "wsemi": "^1.8.73"
+    "wsemi": "^1.8.75"
   },
   "devDependencies": {
     "w-package-tools": "^1.1.12"
