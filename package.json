@@ -1,12 +1,12 @@
 {
   "name": "w-sync-webdata",
-  "version": "1.0.61",
+  "version": "1.0.62",
   "main": "dist/w-sync-webdata-server.umd.js",
   "dependencies": {
-    "wsemi": "^1.8.77"
+    "wsemi": "^1.8.78"
   },
   "devDependencies": {
-    "w-package-tools": "^1.1.13"
+    "w-package-tools": "^1.1.14"
   },
   "scripts": {
     "test": "mocha --parallel --timeout 60000",
