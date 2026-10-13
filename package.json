@@ -1,6 +1,6 @@
 {
   "name": "w-sync-webdata",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "main": "dist/w-sync-webdata-server.umd.js",
   "dependencies": {
     "wsemi": "^1.9.12"

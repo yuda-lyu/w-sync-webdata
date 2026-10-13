@@ -7,10 +7,12 @@ import genID from 'wsemi/src/genID.mjs'
 import evem from 'wsemi/src/evem.mjs'
 import haskey from 'wsemi/src/haskey.mjs'
 import isestr from 'wsemi/src/isestr.mjs'
+import isobj from 'wsemi/src/isobj.mjs'
 import iseobj from 'wsemi/src/iseobj.mjs'
 import isfun from 'wsemi/src/isfun.mjs'
 import j2o from 'wsemi/src/j2o.mjs'
 import o2j from 'wsemi/src/o2j.mjs'
+import genEmit from './genEmit.mjs'
 
 
 /**
@@ -21,7 +23,7 @@ import o2j from 'wsemi/src/o2j.mjs'
  * @param {Object} [opt={}] 輸入設定物件，預設{}
  * @param {String} [opt.fpTableTags='tableTags.json'] 輸入儲存各資料表時間戳檔案路徑串，預設'./tableTags.json'
  * @param {Function} [opt.genTag=()=>'{random string}'] 輸入產生不重複識別碼函數，預設()=>'{random string}'
- * @returns {Object} 回傳後端資料同步物件，可監聽事件changeTableTags、error，可使用函數readTableTags、writeTableTags、initTableTags、setTableTags、getTableTags、updateTableTag
+ * @returns {Object} 回傳後端資料同步物件，可監聽事件changeTableTags、error，可使用函數readTableTags、writeTableTags、initTableTags、setTableTags、getTableTags、updateTableTag、clearSync。監聽器須為同步函數，其同步拋錯時轉為error事件通知，本套件自發之error若無監聽者則改以console.error輸出，不會使行程崩潰。同一事件物件只能建立一個本同步器，重建前須先呼叫clearSync；上層掛於ORM等外部物件之監聽須由上層自行移除
  * @example
  *
  * //前後端共用範例
@@ -235,6 +237,9 @@ import o2j from 'wsemi/src/o2j.mjs'
  */
 function WSyncWebdataServer(instWConverServer, opt = {}) {
     let nowTableTags = {}
+    let isCleared = false
+    let isDirty = false //記憶體之時間戳有尚未落檔之變更
+    let lastWritten = null //本實體最後寫入檔案之內容, 釋放時據以判斷檔案是否已由其他實體接手
 
     //check
     if (!iseobj(instWConverServer)) {
@@ -259,12 +264,8 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
         }
     }
 
-    //eeEmit
-    let eeEmit = (name, ...args) => {
-        setTimeout(() => {
-            instWConverServer.emit(name, ...args)
-        }, 1)
-    }
+    //eeEmit, 監聽器之同步拋錯一律攔截轉為error事件
+    let { emit: eeEmit, emitNow: eeEmitNow, clear: clearEmit } = genEmit(instWConverServer, () => isCleared)
 
     /**
      * 讀取各資料表時間資料
@@ -296,36 +297,56 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
         return r
     }
 
+    //writeTableTagsCore, 將記憶體之時間戳寫入檔案, 回傳錯誤或null; 序列化失敗(例如genTag回傳不可序列化之值)時不寫檔, 以免截空既有檔案
+    let writeTableTagsCore = () => {
+        let r = o2j(nowTableTags, false, { returnWithStateAndMsg: true })
+        if (get(r, 'state') !== 'success') {
+            return new Error(`can not serialize tableTags: ${get(r, 'msg')}`)
+        }
+        try {
+            fs.writeFileSync(fpTableTags, r.msg, 'utf8')
+        }
+        catch (err) {
+            return err
+        }
+        lastWritten = r.msg
+        isDirty = false
+        return null
+    }
+
     /**
-     * 儲存各資料表時間資料
+     * 儲存各資料表時間資料，將目前之各資料表時間戳寫入檔案，失敗時發出error事件
      *
      * @memberof WSyncWebdataServer
-     * @param {Object} tableTags 輸入各資料表時間戳物件
      * @returns {Undefined} 無回傳
      * @example
      *
-     * let tableTags = {...}
-     * wsds.writeTableTags(tableTags)
+     * wsds.writeTableTags()
      *
      */
     function writeTableTags() {
-        try {
-            let c = o2j(nowTableTags)
-            fs.writeFileSync(fpTableTags, c, 'utf8')
+
+        //check
+        if (isCleared) {
+            return
         }
-        catch (err) {
+
+        //writeTableTagsCore
+        let err = writeTableTagsCore()
+        if (err) {
             eeEmit('error', {
                 msg: 'writeTableTags catch',
                 err,
             })
         }
+
     }
 
     /**
      * 初始化各資料表時間資料
      *
      * @memberof WSyncWebdataServer
-     * @param {Object} tableTags 輸入各資料表時間戳物件
+     * @param {Object} tableTags 輸入各資料表時間戳物件，null視同{}，其他非物件則發出error事件且不作用；mode為'useInputOnly'時傳入之物件將直接作為內部狀態(之後之更新會就地修改該物件)
      * @param {String} [mode='useInputFirst'] 輸入使用設定方式字串，可有'useInputFirst'代表使用傳入設定優先再與既有JSON檔設定合併，為預設值，'useStorageFirst'代表使用既有JSON檔設定優先再與傳入設定合併，'useInputOnly'代表只使用傳入設定，'useStorageOnly'代表只使用既有JSON檔設定
      * @returns {Undefined} 無回傳
      * @example
@@ -341,6 +362,23 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
         // useStorageFirst
         // useInputOnly
         // useStorageOnly
+
+        //check
+        if (isCleared) {
+            return
+        }
+
+        //check, null視同{}, 其他非物件無法作為各表時間戳
+        if (tableTags === null) {
+            tableTags = {}
+        }
+        if (!isobj(tableTags)) {
+            eeEmit('error', {
+                msg: 'invalid tableTags for initTableTags',
+                err: tableTags,
+            })
+            return
+        }
 
         //mode
         if (mode === 'useInputOnly') {
@@ -368,7 +406,7 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
      * 直接設定各資料表時間資料
      *
      * @memberof WSyncWebdataServer
-     * @param {Object} tableTags 輸入各資料表時間戳物件
+     * @param {Object} tableTags 輸入各資料表時間戳物件，null視同{}，其他非物件則發出error事件且不作用
      * @returns {Undefined} 無回傳
      * @example
      *
@@ -377,6 +415,23 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
      *
      */
     function setTableTags(tableTags = {}) {
+
+        //check
+        if (isCleared) {
+            return
+        }
+
+        //check, null視同{}, 其他非物件無法合併
+        if (tableTags === null) {
+            tableTags = {}
+        }
+        if (!isobj(tableTags)) {
+            eeEmit('error', {
+                msg: 'invalid tableTags for setTableTags',
+                err: tableTags,
+            })
+            return
+        }
 
         //merge
         nowTableTags = merge(nowTableTags, tableTags)
@@ -387,7 +442,7 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
     }
 
     /**
-     * 直接取得各資料表時間資料
+     * 直接取得各資料表時間資料，回傳者為內部狀態物件本身，不可修改
      *
      * @memberof WSyncWebdataServer
      * @returns {Object} 回傳各資料表時間戳物件
@@ -400,7 +455,7 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
         return nowTableTags
     }
 
-    //updateTableTagCore, 避免大量更新時造成大量推播, 通過debounce合併故是回傳nowTableTags
+    //updateTableTagCore, 避免大量更新時造成大量推播, 通過debounce合併故是回傳nowTableTags; 持續有更新且間隔皆小於200ms時推播會延至更新停止後(無上限)
     let updateTableTagCore = debounce(() => {
 
         //writeTableTags
@@ -412,10 +467,10 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
     }, 200)
 
     /**
-     * 更新指定資料表之時間戳，當資料表更新時需調用此函數
+     * 更新指定資料表之時間戳，當資料表更新時需調用此函數，200ms內之多次更新合併為一次寫檔與推播；持續有更新且間隔皆小於200ms時，推播會延至更新停止後
      *
      * @memberof WSyncWebdataServer
-     * @param {String} tableTag 輸入欲更新指定資料表名稱字串
+     * @param {String} tableName 輸入欲更新指定資料表名稱字串，非有效字串時發出error事件且不作用
      * @returns {Undefined} 無回傳
      * @example
      *
@@ -425,8 +480,23 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
      */
     function updateTableTag(tableName) {
 
+        //check
+        if (isCleared) {
+            return
+        }
+
+        //check
+        if (!isestr(tableName)) {
+            eeEmit('error', {
+                msg: 'invalid tableName',
+                err: tableName,
+            })
+            return
+        }
+
         //modify
         nowTableTags[tableName] = genTag()
+        isDirty = true
 
         //updateTableTagCore
         updateTableTagCore()
@@ -447,6 +517,62 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
      */
     function onChangeUpdateTableTag() {} onChangeUpdateTableTag()
 
+    /**
+     * 釋放資源：取消待觸發之寫檔與推播及已排程之事件，並將尚未落檔之時間戳寫入檔案(不推播；檔案內容已非本實體最後寫入者代表已由其他實體接手，不覆寫)，之後各寫入類函數皆不作用且不再派發任何事件，讀取類函數照常，可重複呼叫。落檔失敗時於本函數內同步發出error事件。同一時間戳檔重建實體時，宜先釋放舊實體再建立新實體
+     *
+     * @memberof WSyncWebdataServer
+     * @returns {Undefined} 無回傳
+     * @example
+     *
+     * wsds.clearSync()
+     *
+     */
+    function clearSync() {
+
+        //check
+        if (isCleared) {
+            return
+        }
+
+        //cancel, 取消待觸發之寫檔與推播
+        updateTableTagCore.cancel()
+
+        //writeTableTagsCore, 尚未落檔之時間戳須寫入, 否則以讀檔模式重建者會取得舊時間戳而使前端不重拉
+        let err = null
+        if (isDirty) {
+
+            //c, 檔案目前內容, 讀取失敗時視為無法判斷而不覆寫
+            let c = null
+            try {
+                if (fs.existsSync(fpTableTags)) {
+                    c = fs.readFileSync(fpTableTags, 'utf8')
+                }
+            }
+            catch (e) {
+                c = undefined
+            }
+
+            //檔案不存在, 或仍為本實體最後寫入之內容者才寫入
+            if (c === null || c === lastWritten) {
+                err = writeTableTagsCore()
+            }
+
+        }
+
+        //isCleared, 之後各寫入類函數皆不作用, 事件亦不再派發
+        isCleared = true
+        clearEmit()
+
+        //落檔失敗於此同步通知, 因釋放後不再派發任何事件故不可延後
+        if (err) {
+            eeEmitNow('error', {
+                msg: 'writeTableTags catch',
+                err,
+            })
+        }
+
+    }
+
     //save
     instWConverServer.readTableTags = readTableTags
     instWConverServer.writeTableTags = writeTableTags
@@ -454,6 +580,7 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
     instWConverServer.setTableTags = setTableTags
     instWConverServer.getTableTags = getTableTags
     instWConverServer.updateTableTag = updateTableTag
+    instWConverServer.clearSync = clearSync
 
     return instWConverServer
 }

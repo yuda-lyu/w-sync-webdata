@@ -6,10 +6,11 @@ import evem from 'wsemi/src/evem.mjs'
 import haskey from 'wsemi/src/haskey.mjs'
 import isbol from 'wsemi/src/isbol.mjs'
 import ispint from 'wsemi/src/ispint.mjs'
+import isobj from 'wsemi/src/isobj.mjs'
 import iseobj from 'wsemi/src/iseobj.mjs'
 import cint from 'wsemi/src/cint.mjs'
-import delay from 'wsemi/src/delay.mjs'
 import isWindow from 'wsemi/src/isWindow.mjs'
+import genEmit from './genEmit.mjs'
 
 
 /**
@@ -20,7 +21,8 @@ import isWindow from 'wsemi/src/isWindow.mjs'
  * @param {Object} [opt={}] 輸入設定物件，預設{}
  * @param {Boolean} [opt.autoPollingTableTagsForActive=false] 輸入是否當使用者活躍時自動進行輪詢布林值，預設false
  * @param {Integer} [opt.pollingDelayTime=2000] 輸入輪詢強制延遲時間整數，單位ms，預設2000
- * @returns {Object} 回傳前端資料同步物件，可監聽事件refreshTags、refreshState、refreshTable、getData、error，可使用函數setTableTags、updateTableTags、pollingTableTags
+ * @param {Integer} [opt.refreshTimeout=0] 輸入等待refreshTable與refreshTags事件回覆之上限時間整數，單位ms，預設0代表不限。逾時僅結束該次等待並發出error事件，逾時後才回覆之資料仍會依序提交
+ * @returns {Object} 回傳前端資料同步物件，可監聽事件refreshTags、beforeUpdateTableTags、refreshState、refreshTable、getData、afterUpdateTableTags、error，可使用函數setTableTags、updateTableTags、pollingTableTags、clearSync。refreshTags與refreshTable事件之輸入物件帶有pm(回覆通道)，監聽器須為同步函數，並於每條路徑以pm.resolve回傳資料或以pm.reject回傳錯誤(非同步工作須自行catch後以pm回覆)；無監聽器、或監聽器於回覆前同步拋錯時，該pm由本套件以reject終結並視為該次失敗。某表取資料失敗時不推進其時間戳並發出error事件(內容為{msg,err,tableName,timeTag})，之後再收到同一時間戳時會重拉。同一表有多個請求時只提交序號較新之回應(時間戳不倒退)，只有最新之請求會報錯；同一時刻多則推播所產生之同表請求只派發最新者，已派發而被取代之請求其批次即結束等待，故該批次之afterUpdateTableTags可能早於該表資料送達。監聽器同步拋錯時轉為error事件通知，本套件自發之error若無監聽者則改以console.error輸出，不會使行程崩潰；getData監聽器拋錯時該表時間戳已推進，不會因此重拉。表名不得為__proto__。同一事件物件只能建立一個本同步器，重建前須先呼叫clearSync
  * @example
  *
  * //前後端共用範例
@@ -235,6 +237,14 @@ import isWindow from 'wsemi/src/isWindow.mjs'
 function WSyncWebdataClient(instWConverClient, opt = {}) {
     let nowTableTags = {}
     let isPolling = false
+    let isCleared = false
+    let seq = 0 //取資料請求之序號, 遞增
+    let latest = new Map() //各表最新一次之取資料請求
+    let committed = new Map() //各表已提交之最大請求序號, 只提交序號更大之回應, 避免後發先至時時間戳倒退
+    let epochTags = 0 //已套用之時間戳批次數, 供輪詢判斷其回覆是否過期
+    let waitPolling = null //輪詢等待時間戳回覆之內部完成通道
+    let timerDelay = null //輪詢強制延遲之計時器
+    let resolveDelay = null //輪詢強制延遲之結束函數
 
     //check
     if (!iseobj(instWConverClient)) {
@@ -258,18 +268,30 @@ function WSyncWebdataClient(instWConverClient, opt = {}) {
     }
     pollingDelayTime = cint(pollingDelayTime)
 
-    //eeEmit
-    let eeEmit = (name, ...args) => {
-        setTimeout(() => {
-            instWConverClient.emit(name, ...args)
-        }, 1)
+    //refreshTimeout
+    let refreshTimeout = get(opt, 'refreshTimeout')
+    if (!ispint(refreshTimeout)) {
+        refreshTimeout = 0 //預設不限, 取資料所需時間由使用端決定
+    }
+    refreshTimeout = cint(refreshTimeout)
+
+    //eeEmit, eeEmitPm, 監聽器之同步拋錯一律攔截轉為error事件, 帶pm之事件於無人接聽或監聽器拋錯時reject該pm
+    let { emit: eeEmit, emitPm: eeEmitPm, clear: clearEmit } = genEmit(instWConverClient, () => isCleared)
+
+    //genWait, 內部完成通道, 只resolve不reject
+    let genWait = () => {
+        let res = null
+        let promise = new Promise((resolve) => {
+            res = resolve
+        })
+        return { promise, resolve: res }
     }
 
     /**
-     * 直接設定各資料表時間資料
+     * 直接設定各資料表時間資料，供啟動時還原既有時間戳使用，傳入之物件將直接作為內部狀態(之後之更新會就地修改該物件)
      *
      * @memberof WSyncWebdataClient
-     * @param {Object} tableTags 輸入各資料表時間戳物件
+     * @param {Object} tableTags 輸入各資料表時間戳物件，null視同{}，其他非物件則發出error事件且不作用
      * @example
      *
      * let tableTags = {...}
@@ -277,14 +299,171 @@ function WSyncWebdataClient(instWConverClient, opt = {}) {
      *
      */
     function setTableTags(tableTags = {}) {
+
+        //check
+        if (isCleared) {
+            return
+        }
+
+        //check, null視同無既有時間戳, 其他非物件無法逐表比對
+        if (tableTags === null) {
+            tableTags = {}
+        }
+        if (!isobj(tableTags)) {
+            eeEmit('error', {
+                msg: 'invalid tableTags for setTableTags',
+                err: tableTags,
+            })
+            return
+        }
+
         nowTableTags = tableTags
+        committed.clear()
+    }
+
+    //refreshTable, 對指定表發出取資料請求, 回傳該表之等待結束時resolve之promise(恆不reject), 成敗各自以getData或error事件通知
+    let refreshTable = (k, v) => {
+
+        //entry
+        seq++
+        let entry = {
+            seq,
+            v,
+            dispatched: false,
+            completed: false,
+            timer: null,
+            wait: genWait(),
+        }
+
+        //complete, 結束本請求之等待, 可重複呼叫
+        let complete = () => {
+            if (entry.completed) {
+                return
+            }
+            entry.completed = true
+            if (entry.timer !== null) {
+                clearTimeout(entry.timer)
+                entry.timer = null
+            }
+            if (latest.get(k) === entry) {
+                latest.delete(k)
+            }
+            entry.wait.resolve()
+        }
+        entry.complete = complete
+
+        //prev, 同表之前一請求被本請求取代
+        let prev = latest.get(k)
+        latest.set(k, entry)
+        if (prev) {
+            if (prev.dispatched) {
+                //已派發者結束其等待, 其結果晚到時仍依序號提交
+                prev.complete()
+            }
+            else {
+                //尚未派發者不再派發, 其等待改為跟隨本請求之結束(合併同一時刻之多則推播)
+                entry.wait.promise.then(prev.complete)
+            }
+        }
+
+        //isLatest
+        let isLatest = () => {
+            return !isCleared && latest.get(k) === entry
+        }
+
+        //pm
+        let pm = genPm()
+
+        //emit事件, 外部事件on收到通知時打API去撈指定表數據, 外部由pm回傳成功取得數據或失敗
+        eeEmitPm('refreshTable', { tableName: k, timeTag: v, pm }, {
+            beforeDispatch: () => {
+
+                //check, 已被同表較新之請求取代者不派發
+                if (latest.get(k) !== entry) {
+                    return false
+                }
+                entry.dispatched = true
+
+                //refreshTimeout, 可選之等待上限, 逾時僅結束等待並通報, 晚到之資料仍依序號提交
+                if (refreshTimeout > 0) {
+                    entry.timer = setTimeout(() => {
+                        entry.timer = null
+                        if (isLatest() && nowTableTags[k] !== v) {
+                            eeEmit('error', {
+                                msg: 'can not get table data: ' + k,
+                                err: new Error(`refreshTable timeout[${refreshTimeout}ms]`),
+                                tableName: k,
+                                timeTag: v,
+                            })
+                        }
+                        complete()
+                    }, refreshTimeout)
+                }
+
+                return true
+            },
+        })
+
+        //wait
+        pm
+            .then((data) => {
+
+                //check
+                if (isCleared) {
+                    return
+                }
+
+                //check, 序號大於已提交者才提交
+                if (entry.seq <= (committed.get(k) || 0)) {
+                    return
+                }
+                committed.set(k, entry.seq)
+
+                //save
+                nowTableTags[k] = v
+
+                //emit, 外部事件on可收到API回傳之數據
+                eeEmit('getData', { tableName: k, timeTag: v, data })
+
+            }, (err) => {
+
+                //check, 只有該表最新之請求報錯, 且該時間戳尚未由其他請求提交
+                if (!isLatest() || nowTableTags[k] === v) {
+                    return
+                }
+
+                //emit, 不推進時間戳, 之後再收到同一時間戳時會重拉
+                eeEmit('error', {
+                    msg: 'can not get table data: ' + k,
+                    err,
+                    tableName: k,
+                    timeTag: v,
+                })
+
+            })
+            .catch((err) => {
+
+                //結算過程之非預期錯誤(例如setTableTags傳入凍結物件而無法寫入)
+                eeEmit('error', {
+                    msg: 'can not save table data: ' + k,
+                    err,
+                    tableName: k,
+                    timeTag: v,
+                })
+
+            })
+            .then(() => {
+                complete()
+            })
+
+        return entry.wait.promise
     }
 
     /**
-     * 主動更新指定資料表之時間戳，當有新的資料表時間戳資料時調用此函數進行更新
+     * 主動更新指定資料表之時間戳，當有新的資料表時間戳資料時調用此函數進行更新，回傳之promise恆resolve，各表之成敗以getData或error事件通知
      *
      * @memberof WSyncWebdataClient
-     * @param {Object} tableTags 輸入各資料表時間戳物件
+     * @param {Object} tableTags 輸入各資料表時間戳物件，非物件(null除外)時發出error事件且不作用
      * @example
      *
      * let tableTags = {...}
@@ -292,94 +471,108 @@ function WSyncWebdataClient(instWConverClient, opt = {}) {
      *
      */
     async function updateTableTags(tableTags = {}) {
-        let pms = []
 
-        //emit
-        eeEmit('beforeUpdateTableTags', {
-            oldTableTags: cloneDeep(nowTableTags),
-            newTableTags: cloneDeep(tableTags),
-        })
+        //check
+        if (isCleared) {
+            return
+        }
 
-        //needToRefresh
-        let needToRefresh = false
-        each(tableTags, (v, k) => {
+        try {
 
-            //原有更新時間戳
-            let vv = nowTableTags[k]
-
-            //check
-            if (vv !== v) {
-                needToRefresh = true
+            //check, null維持既有行為(不迭代); 其餘非物件逐鍵比對時會把字元或索引當表名, 故不處理
+            if (tableTags !== null && !isobj(tableTags)) {
+                eeEmit('error', {
+                    msg: 'invalid tableTags',
+                    err: tableTags,
+                })
+                return
             }
 
-        })
+            //tt, 入口快照, 判斷、請求與事件皆以此為準, 不受呼叫端於批次期間修改所傳物件之影響
+            let tt = cloneDeep(tableTags)
 
-        //emit,
-        eeEmit('refreshState', {
-            needToRefresh,
-            oldTableTags: cloneDeep(nowTableTags),
-            newTableTags: cloneDeep(tableTags),
-        })
+            //epochTags
+            epochTags++
 
-        //確認各tags的時間戳
-        each(tableTags, (v, k) => {
+            let pms = []
 
-            //原有更新時間戳
-            let vv = nowTableTags[k]
+            //emit
+            eeEmit('beforeUpdateTableTags', {
+                oldTableTags: cloneDeep(nowTableTags),
+                newTableTags: cloneDeep(tt),
+            })
 
-            //check
-            if (vv !== v) {
+            //needToRefresh
+            let needToRefresh = false
+            each(tt, (v, k) => {
 
-                //pm
-                let pm = genPm()
+                //原有更新時間戳
+                let vv = nowTableTags[k]
 
-                //tt
-                let tt = { tableName: k, timeTag: v, pm }
+                //check
+                if (vv !== v) {
+                    needToRefresh = true
+                }
 
-                //push
-                pms.push(pm)
+            })
 
-                //emit事件, 外部事件on收到通知時打API去撈指定表數據, 外部由tt.pm回傳成功取得數據或失敗
-                eeEmit('refreshTable', tt)
+            //emit,
+            eeEmit('refreshState', {
+                needToRefresh,
+                oldTableTags: cloneDeep(nowTableTags),
+                newTableTags: cloneDeep(tt),
+            })
 
-                //wait
-                pm
-                    .then((data) => {
+            //確認各tags的時間戳
+            each(tt, (v, k) => {
 
-                        //save
-                        nowTableTags[k] = v
+                //原有更新時間戳
+                let vv = nowTableTags[k]
 
-                        //emit, 外部事件on可收到API回傳之數據
-                        eeEmit('getData', { tableName: k, timeTag: v, data })
+                //check
+                if (vv !== v) {
 
-                    })
-                    .catch((err) => {
+                    //refreshTable
+                    pms.push(refreshTable(k, v))
 
-                        //emit
-                        eeEmit('error', {
-                            msg: 'can not get table data: ' + k,
-                            err,
-                        })
+                }
+                else {
 
-                    })
+                    //目標為已提交之時間戳時, 進行中之其他時間戳請求失效(不得提交)並結束其等待
+                    let e = latest.get(k)
+                    if (e && e.v !== v) {
+                        committed.set(k, seq)
+                        e.complete()
+                    }
 
-            }
+                }
 
-        })
+            })
 
-        //Promise.all
-        await Promise.all(pms) //不會有catch
+            //Promise.all, 各表之等待恆resolve, 故批次不會reject且afterUpdateTableTags必定發出
+            await Promise.all(pms)
 
-        //emit
-        eeEmit('afterUpdateTableTags', {
-            oldTableTags: cloneDeep(nowTableTags),
-            newTableTags: cloneDeep(tableTags),
-        })
+            //emit
+            eeEmit('afterUpdateTableTags', {
+                oldTableTags: cloneDeep(nowTableTags),
+                newTableTags: cloneDeep(tt),
+            })
+
+        }
+        catch (err) {
+
+            //emit
+            eeEmit('error', {
+                msg: 'updateTableTags catch',
+                err,
+            })
+
+        }
 
     }
 
     /**
-     * 主動觸發輪詢更新各資料表之時間戳
+     * 主動觸發輪詢更新各資料表之時間戳，回傳之promise恆resolve。輪詢中重複呼叫時直接返回；等待期間若已有其他時間戳被套用，本次回覆可能較舊而捨棄
      *
      * @memberof WSyncWebdataClient
      * @example
@@ -390,56 +583,158 @@ function WSyncWebdataClient(instWConverClient, opt = {}) {
     async function pollingTableTags() {
 
         //check
-        if (isPolling) {
+        if (isPolling || isCleared) {
             return
         }
         isPolling = true
 
-        //pm
-        let pm = genPm()
+        try {
 
-        //emit, 外部事件on收到通知時打API去撈各資料表時間戳, 需通過pm回傳成功取得數據或失敗
-        eeEmit('refreshTags', { pm })
+            //ep, 本次輪詢開始時之批次數
+            let ep = epochTags
 
-        //wait
-        let tableTags = await pm
-            .catch((err) => {
+            //pm
+            let pm = genPm()
+
+            //waitPolling, 逾時或釋放時結束等待
+            let w = genWait()
+            waitPolling = w
+
+            //refreshTimeout
+            let t = null
+            if (refreshTimeout > 0) {
+                t = setTimeout(() => {
+                    w.resolve({ state: 'error', err: new Error(`refreshTags timeout[${refreshTimeout}ms]`) })
+                }, refreshTimeout)
+            }
+
+            //emit, 外部事件on收到通知時打API去撈各資料表時間戳, 需通過pm回傳成功取得數據或失敗
+            eeEmitPm('refreshTags', { pm })
+
+            //wait
+            let r = await Promise.race([
+                pm.then((tableTags) => {
+                    return { state: 'success', tableTags }
+                }, (err) => {
+                    return { state: 'error', err }
+                }),
+                w.promise,
+            ])
+            if (t !== null) {
+                clearTimeout(t)
+            }
+            waitPolling = null
+
+            //check
+            if (r.state === 'error') {
 
                 //emit
                 eeEmit('error', {
                     msg: 'can not get tags data',
-                    err,
+                    err: r.err,
                 })
 
+            }
+            else if (r.state === 'success' && r.tableTags && epochTags === ep) {
+
+                //updateTableTags, 假值代表無時間戳可更新(維持既有行為), 其餘交由updateTableTags檢核, 恆不reject
+                await updateTableTags(r.tableTags)
+
+            }
+
+            //強制延遲, 釋放時即結束
+            if (!isCleared) {
+                await new Promise((resolve) => {
+                    resolveDelay = resolve
+                    timerDelay = setTimeout(resolve, pollingDelayTime)
+                })
+                timerDelay = null
+                resolveDelay = null
+            }
+
+        }
+        catch (err) {
+
+            //emit
+            eeEmit('error', {
+                msg: 'pollingTableTags catch',
+                err,
             })
 
-        //check
-        if (tableTags) {
+        }
+        finally {
 
-            //updateTableTags
-            await updateTableTags(tableTags) //不會有catch
+            //恢復isPolling, 任何路徑皆須恢復, 否則之後之輪詢一律直接返回
+            isPolling = false
 
         }
 
-        //強制延遲
-        await delay(pollingDelayTime)
-
-        //恢復isPolling
-        isPolling = false
-
     }
 
-    //pollingTableTags
+    //onActive, 具名保存以便釋放時移除
+    let onActive = null
     if (autoPollingTableTagsForActive) {
 
         //mouseover
         if (isWindow()) {
-            window.addEventListener('mouseover', (e) => {
+            onActive = (e) => {
                 pollingTableTags()
-            }, false)
-            window.addEventListener('touchmove', (e) => {
-                pollingTableTags()
-            }, false)
+            }
+            window.addEventListener('mouseover', onActive, false)
+            window.addEventListener('touchmove', onActive, false)
+        }
+
+    }
+
+    /**
+     * 釋放資源：移除自動輪詢之監聽，取消已排程之事件，結束進行中之等待(其後回覆之結果不再提交)，之後各函數皆不作用且不再派發任何事件，可重複呼叫。釋放前已提交之時間戳，其getData若尚未派發則不再派發
+     *
+     * @memberof WSyncWebdataClient
+     * @example
+     *
+     * wsdc.clearSync()
+     *
+     */
+    function clearSync() {
+
+        //check
+        if (isCleared) {
+            return
+        }
+        isCleared = true
+
+        //取消已排程之派發
+        clearEmit()
+
+        //移除自動輪詢之監聽
+        if (onActive !== null) {
+            window.removeEventListener('mouseover', onActive, false)
+            window.removeEventListener('touchmove', onActive, false)
+            onActive = null
+        }
+
+        //結束各表進行中之等待, 使等待中之updateTableTags可結束
+        let es = []
+        latest.forEach((e) => {
+            es.push(e)
+        })
+        latest.clear()
+        each(es, (e) => {
+            e.complete()
+        })
+
+        //結束輪詢之等待與延遲
+        if (waitPolling !== null) {
+            waitPolling.resolve({ state: 'cleared' })
+            waitPolling = null
+        }
+        if (timerDelay !== null) {
+            clearTimeout(timerDelay)
+            timerDelay = null
+        }
+        if (resolveDelay !== null) {
+            resolveDelay()
+            resolveDelay = null
         }
 
     }
@@ -448,6 +743,7 @@ function WSyncWebdataClient(instWConverClient, opt = {}) {
     instWConverClient.setTableTags = setTableTags
     instWConverClient.updateTableTags = updateTableTags
     instWConverClient.pollingTableTags = pollingTableTags
+    instWConverClient.clearSync = clearSync
 
     return instWConverClient
 }
