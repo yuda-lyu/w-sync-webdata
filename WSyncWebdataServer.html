@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WSyncWebdataClient.html">WSyncWebdataClient</a><ul class='methods'><li data-type='method'><a href="WSyncWebdataClient.html#.pollingTableTags">pollingTableTags</a></li><li data-type='method'><a href="WSyncWebdataClient.html#.setTableTags">setTableTags</a></li><li data-type='method'><a href="WSyncWebdataClient.html#.updateTableTags">updateTableTags</a></li></ul></li><li><a href="WSyncWebdataServer.html">WSyncWebdataServer</a><ul class='methods'><li data-type='method'><a href="WSyncWebdataServer.html#.getTableTags">getTableTags</a></li><li data-type='method'><a href="WSyncWebdataServer.html#.initTableTags">initTableTags</a></li><li data-type='method'><a href="WSyncWebdataServer.html#.onChangeUpdateTableTag">onChangeUpdateTableTag</a></li><li data-type='method'><a href="WSyncWebdataServer.html#.readTableTags">readTableTags</a></li><li data-type='method'><a href="WSyncWebdataServer.html#.setTableTags">setTableTags</a></li><li data-type='method'><a href="WSyncWebdataServer.html#.updateTableTag">updateTableTag</a></li><li data-type='method'><a href="WSyncWebdataServer.html#.writeTableTags">writeTableTags</a></li></ul></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="WSyncWebdataClient.html">WSyncWebdataClient</a><ul class='methods'><li data-type='method'><a href="WSyncWebdataClient.html#.clearSync">clearSync</a></li><li data-type='method'><a href="WSyncWebdataClient.html#.pollingTableTags">pollingTableTags</a></li><li data-type='method'><a href="WSyncWebdataClient.html#.setTableTags">setTableTags</a></li><li data-type='method'><a href="WSyncWebdataClient.html#.updateTableTags">updateTableTags</a></li></ul></li><li><a href="WSyncWebdataServer.html">WSyncWebdataServer</a><ul class='methods'><li data-type='method'><a href="WSyncWebdataServer.html#.clearSync">clearSync</a></li><li data-type='method'><a href="WSyncWebdataServer.html#.getTableTags">getTableTags</a></li><li data-type='method'><a href="WSyncWebdataServer.html#.initTableTags">initTableTags</a></li><li data-type='method'><a href="WSyncWebdataServer.html#.onChangeUpdateTableTag">onChangeUpdateTableTag</a></li><li data-type='method'><a href="WSyncWebdataServer.html#.readTableTags">readTableTags</a></li><li data-type='method'><a href="WSyncWebdataServer.html#.setTableTags">setTableTags</a></li><li data-type='method'><a href="WSyncWebdataServer.html#.updateTableTag">updateTableTag</a></li><li data-type='method'><a href="WSyncWebdataServer.html#.writeTableTags">writeTableTags</a></li></ul></li></ul>
     
 </nav>
 
@@ -80,7 +80,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line236">line 236</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line238">line 238</a>
     </li></ul></dd>
     
 
@@ -366,7 +366,7 @@
 
         
 <div class="param-desc">
-    <p>回傳後端資料同步物件，可監聽事件changeTableTags、error，可使用函數readTableTags、writeTableTags、initTableTags、setTableTags、getTableTags、updateTableTag</p>
+    <p>回傳後端資料同步物件，可監聽事件changeTableTags、error，可使用函數readTableTags、writeTableTags、initTableTags、setTableTags、getTableTags、updateTableTag、clearSync。監聽器須為同步函數，其同步拋錯時轉為error事件通知，本套件自發之error若無監聽者則改以console.error輸出，不會使行程崩潰。同一事件物件只能建立一個本同步器，重建前須先呼叫clearSync；上層掛於ORM等外部物件之監聽須由上層自行移除</p>
 </div>
 
 
@@ -414,6 +414,119 @@
 
     
 
+    <h4 class="name" id=".clearSync"><span class="type-signature type-signature-static">(static) </span>clearSync<span class="signature">()</span><span class="type-signature"> &rarr; {Undefined}</span></h4>
+
+    
+
+
+
+
+<dl class="details">
+    
+    <dt class="tag-description">Description:</dt>
+    <dd class="tag-description"><ul class="dummy"><li><p>釋放資源：取消待觸發之寫檔與推播及已排程之事件，並將尚未落檔之時間戳寫入檔案(不推播；檔案內容已非本實體最後寫入者代表已由其他實體接手，不覆寫)，之後各寫入類函數皆不作用且不再派發任何事件，讀取類函數照常，可重複呼叫。落檔失敗時於本函數內同步發出error事件。同一時間戳檔重建實體時，宜先釋放舊實體再建立新實體</p></li></ul></dd>
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line530">line 530</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+    <h5 class="h5-examples">Example</h5>
+    
+    <pre class="prettyprint"><code>wsds.clearSync()</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5 class="h5-returns">Returns:</h5>
+
+        
+<div class="param-desc">
+    <p>無回傳</p>
+</div>
+
+
+
+<dl class="param-type">
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Undefined</span>
+
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+        
+            
+
+    
+
     <h4 class="name" id=".getTableTags"><span class="type-signature type-signature-static">(static) </span>getTableTags<span class="signature">()</span><span class="type-signature"> &rarr; {Object}</span></h4>
 
     
@@ -424,13 +537,13 @@
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>直接取得各資料表時間資料</p></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>直接取得各資料表時間資料，回傳者為內部狀態物件本身，不可修改</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line399">line 399</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line454">line 454</a>
     </li></ul></dd>
     
 
@@ -543,7 +656,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line338">line 338</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line359">line 359</a>
     </li></ul></dd>
     
 
@@ -653,7 +766,7 @@
                 </td>
             
 
-            <td class="description last"><p>輸入各資料表時間戳物件</p></td>
+            <td class="description last"><p>輸入各資料表時間戳物件，null視同{}，其他非物件則發出error事件且不作用；mode為'useInputOnly'時傳入之物件將直接作為內部狀態(之後之更新會就地修改該物件)</p></td>
         </tr>
 
     
@@ -762,7 +875,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line448">line 448</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line518">line 518</a>
     </li></ul></dd>
     
 
@@ -902,7 +1015,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line279">line 279</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line280">line 280</a>
     </li></ul></dd>
     
 
@@ -1015,7 +1128,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line379">line 379</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line417">line 417</a>
     </li></ul></dd>
     
 
@@ -1109,7 +1222,7 @@
 
             
 
-            <td class="description last"><p>輸入各資料表時間戳物件</p></td>
+            <td class="description last"><p>輸入各資料表時間戳物件，null視同{}，其他非物件則發出error事件且不作用</p></td>
         </tr>
 
     
@@ -1162,7 +1275,7 @@
 
     
 
-    <h4 class="name" id=".updateTableTag"><span class="type-signature type-signature-static">(static) </span>updateTableTag<span class="signature">(tableTag)</span><span class="type-signature"> &rarr; {Undefined}</span></h4>
+    <h4 class="name" id=".updateTableTag"><span class="type-signature type-signature-static">(static) </span>updateTableTag<span class="signature">(tableName)</span><span class="type-signature"> &rarr; {Undefined}</span></h4>
 
     
 
@@ -1172,13 +1285,13 @@
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>更新指定資料表之時間戳，當資料表更新時需調用此函數</p></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>更新指定資料表之時間戳，當資料表更新時需調用此函數，200ms內之多次更新合併為一次寫檔與推播；持續有更新且間隔皆小於200ms時，推播會延至更新停止後</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line426">line 426</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line481">line 481</a>
     </li></ul></dd>
     
 
@@ -1255,7 +1368,7 @@
 
         <tr>
             
-                <td class="name"><code>tableTag</code></td>
+                <td class="name"><code>tableName</code></td>
             
 
             <td class="type">
@@ -1272,7 +1385,7 @@
 
             
 
-            <td class="description last"><p>輸入欲更新指定資料表名稱字串</p></td>
+            <td class="description last"><p>輸入欲更新指定資料表名稱字串，非有效字串時發出error事件且不作用</p></td>
         </tr>
 
     
@@ -1325,7 +1438,7 @@
 
     
 
-    <h4 class="name" id=".writeTableTags"><span class="type-signature type-signature-static">(static) </span>writeTableTags<span class="signature">(tableTags)</span><span class="type-signature"> &rarr; {Undefined}</span></h4>
+    <h4 class="name" id=".writeTableTags"><span class="type-signature type-signature-static">(static) </span>writeTableTags<span class="signature">()</span><span class="type-signature"> &rarr; {Undefined}</span></h4>
 
     
 
@@ -1335,13 +1448,13 @@
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>儲存各資料表時間資料</p></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>儲存各資料表時間資料，將目前之各資料表時間戳寫入檔案，失敗時發出error事件</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line311">line 311</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line327">line 327</a>
     </li></ul></dd>
     
 
@@ -1388,59 +1501,9 @@
 
     <h5 class="h5-examples">Example</h5>
     
-    <pre class="prettyprint"><code>let tableTags = {...}wsds.writeTableTags(tableTags)</code></pre>
+    <pre class="prettyprint"><code>wsds.writeTableTags()</code></pre>
 
 
-
-
-    <h5 class="h5-parameters">Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>tableTags</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"><p>輸入各資料表時間戳物件</p></td>
-        </tr>
-
-    
-    </tbody>
-</table>
 
 
 
@@ -1503,7 +1566,7 @@
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sun Oct 11 2026 14:11:22 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Tue Oct 13 2026 08:34:44 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
