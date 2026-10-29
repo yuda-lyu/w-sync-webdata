@@ -1,10 +1,11 @@
 import fs from 'fs'
 import get from 'lodash-es/get.js'
-import debounce from 'lodash-es/debounce.js'
 import merge from 'lodash-es/merge.js'
 import now2str from 'wsemi/src/now2str.mjs'
 import genID from 'wsemi/src/genID.mjs'
 import evem from 'wsemi/src/evem.mjs'
+import debounce from 'wsemi/src/debounce.mjs'
+import getTrace from 'wsemi/src/getTrace.mjs'
 import haskey from 'wsemi/src/haskey.mjs'
 import isestr from 'wsemi/src/isestr.mjs'
 import isobj from 'wsemi/src/isobj.mjs'
@@ -23,6 +24,7 @@ import genEmit from './genEmit.mjs'
  * @param {Object} [opt={}] 輸入設定物件，預設{}
  * @param {String} [opt.fpTableTags='tableTags.json'] 輸入儲存各資料表時間戳檔案路徑串，預設'./tableTags.json'
  * @param {Function} [opt.genTag=()=>'{random string}'] 輸入產生不重複識別碼函數，預設()=>'{random string}'
+ * @param {Function} [opt.onTrace=null] 輸入觀察回調函數，於內部事件發生當下同步呼叫，傳入一個凍結之事件物件{ type, ... }，供測試以事件(而非等待時間)同步與診斷；type為'queued'時為updateTableTag已接受並排入合併佇列(含tableName)，'flush'時為合併窗口屆滿而即將寫檔並發出changeTableTags(含dropped為被合併之較早更新數，無被合併者為0)；回調不帶接收者呼叫，其拋錯與回傳值皆忽略，不影響同步器；clearSync之後不再呼叫，預設null
  * @returns {Object} 回傳後端資料同步物件，可監聽事件changeTableTags、error，可使用函數readTableTags、writeTableTags、initTableTags、setTableTags、getTableTags、updateTableTag、clearSync。監聽器須為同步函數，其同步拋錯時轉為error事件通知，本套件自發之error若無監聽者則改以console.error輸出，不會使行程崩潰。同一事件物件只能建立一個本同步器，重建前須先呼叫clearSync；上層掛於ORM等外部物件之監聽須由上層自行移除
  * @example
  *
@@ -264,6 +266,9 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
         }
     }
 
+    //trace, 觀察回調(opt.onTrace), 未給時為null
+    let trace = getTrace(opt)
+
     //eeEmit, 監聽器之同步拋錯一律攔截轉為error事件
     let { emit: eeEmit, emitNow: eeEmitNow, clear: clearEmit } = genEmit(instWConverServer, () => isCleared)
 
@@ -455,8 +460,13 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
         return nowTableTags
     }
 
-    //updateTableTagCore, 避免大量更新時造成大量推播, 通過debounce合併故是回傳nowTableTags; 持續有更新且間隔皆小於200ms時推播會延至更新停止後(無上限)
-    let updateTableTagCore = debounce(() => {
+    //updateTableTagFlush, 合併窗口屆滿時之寫檔與推播, 推播為nowTableTags
+    let updateTableTagFlush = () => {
+
+        //check, wsemi之debounce無cancel, 釋放後已排入之任務於屆滿時在此略過
+        if (isCleared) {
+            return
+        }
 
         //writeTableTags
         writeTableTags()
@@ -464,10 +474,21 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
         //emit
         eeEmit('changeTableTags', nowTableTags)
 
-    }, 200)
+    }
+
+    //updateTableTagCore, 避免大量更新時造成大量推播, 通過wsemi之debounce合併(每10ms偵測, 於超過200ms未有更新時執行最後一筆任務); 持續有更新且間隔皆小於200ms時推播會延至更新停止後(無上限)
+    let optDebounce = {}
+    if (trace) {
+        optDebounce.onTrace = (e) => {
+            if (e.type === 'run' && !isCleared) {
+                trace('flush', { dropped: e.dropped })
+            }
+        }
+    }
+    let updateTableTagCore = debounce(200, optDebounce)
 
     /**
-     * 更新指定資料表之時間戳，當資料表更新時需調用此函數，200ms內之多次更新合併為一次寫檔與推播；持續有更新且間隔皆小於200ms時，推播會延至更新停止後
+     * 更新指定資料表之時間戳，當資料表更新時需調用此函數，約200ms內之多次更新合併為一次寫檔與推播(以每10ms偵測，於超過200ms未有更新時執行)；持續有更新且間隔皆小於200ms時，推播會延至更新停止後
      *
      * @memberof WSyncWebdataServer
      * @param {String} tableName 輸入欲更新指定資料表名稱字串，非有效字串時發出error事件且不作用
@@ -498,8 +519,13 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
         nowTableTags[tableName] = genTag()
         isDirty = true
 
+        //trace
+        if (trace) {
+            trace('queued', { tableName })
+        }
+
         //updateTableTagCore
-        updateTableTagCore()
+        updateTableTagCore(updateTableTagFlush)
 
     }
 
@@ -533,9 +559,6 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
         if (isCleared) {
             return
         }
-
-        //cancel, 取消待觸發之寫檔與推播
-        updateTableTagCore.cancel()
 
         //writeTableTagsCore, 尚未落檔之時間戳須寫入, 否則以讀檔模式重建者會取得舊時間戳而使前端不重拉
         let err = null

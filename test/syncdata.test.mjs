@@ -4,6 +4,7 @@ import assert from 'assert'
 import w from 'wsemi'
 import WSyncWebdataServer from '../src/WSyncWebdataServer.mjs'
 import WSyncWebdataClient from '../src/WSyncWebdataClient.mjs'
+import { useFakeClock } from './tools/timeKit.mjs'
 
 
 describe('syncdata', function() {
@@ -200,9 +201,18 @@ describe('syncdata', function() {
         { 'clinet call getAPIData after': 'table[tabA] = 2' }
     ]
     it(`should return ${res} when test`, async function() {
-        let r = await run()
-        let rr = res
-        assert.strict.deepEqual(r, rr)
+        //規格: 時序以假時鐘驗證(各動作間隔僅數十ms, 真實時間下負載稍高即錯序); 本案之時序為合併窗口約200ms(每10ms偵測)、API延遲100ms、事件1ms派發與腳本於500、750、1000、2000ms之動作交錯, 時間只由advance推進
+        let clock = useFakeClock(0)
+        try {
+            let pm = run()
+            await clock.advance(2000)
+            let r = await pm
+            let rr = res
+            assert.strict.deepEqual(r, rr)
+        }
+        finally {
+            clock.restore()
+        }
     })
 
 })
