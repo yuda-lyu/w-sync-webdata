@@ -80,7 +80,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line238">line 238</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line240">line 240</a>
     </li></ul></dd>
     
 
@@ -337,6 +337,46 @@
         </tr>
 
     
+
+        <tr>
+            
+                <td class="name"><code>onTrace</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    <code>null</code>
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入觀察回調函數，於內部事件發生當下同步呼叫，傳入一個凍結之事件物件{ type, ... }，供測試以事件(而非等待時間)同步與診斷；type為'queued'時為updateTableTag已接受並排入合併佇列(含tableName)，'flush'時為合併窗口屆滿而即將寫檔並發出changeTableTags(含dropped為被合併之較早更新數，無被合併者為0)；回調不帶接收者呼叫，其拋錯與回傳值皆忽略，不影響同步器；clearSync之後不再呼叫，預設null</p></td>
+        </tr>
+
+    
     </tbody>
 </table>
 
@@ -430,7 +470,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line530">line 530</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line556">line 556</a>
     </li></ul></dd>
     
 
@@ -543,7 +583,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line454">line 454</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line459">line 459</a>
     </li></ul></dd>
     
 
@@ -656,7 +696,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line359">line 359</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line364">line 364</a>
     </li></ul></dd>
     
 
@@ -875,7 +915,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line518">line 518</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line544">line 544</a>
     </li></ul></dd>
     
 
@@ -1015,7 +1055,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line280">line 280</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line285">line 285</a>
     </li></ul></dd>
     
 
@@ -1128,7 +1168,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line417">line 417</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line422">line 422</a>
     </li></ul></dd>
     
 
@@ -1285,13 +1325,13 @@
 <dl class="details">
     
     <dt class="tag-description">Description:</dt>
-    <dd class="tag-description"><ul class="dummy"><li><p>更新指定資料表之時間戳，當資料表更新時需調用此函數，200ms內之多次更新合併為一次寫檔與推播；持續有更新且間隔皆小於200ms時，推播會延至更新停止後</p></li></ul></dd>
+    <dd class="tag-description"><ul class="dummy"><li><p>更新指定資料表之時間戳，當資料表更新時需調用此函數，約200ms內之多次更新合併為一次寫檔與推播(以每10ms偵測，於超過200ms未有更新時執行)；持續有更新且間隔皆小於200ms時，推播會延至更新停止後</p></li></ul></dd>
     
 
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line481">line 481</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line502">line 502</a>
     </li></ul></dd>
     
 
@@ -1454,7 +1494,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line327">line 327</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line332">line 332</a>
     </li></ul></dd>
     
 
@@ -1566,7 +1606,7 @@
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Wed Oct 28 2026 01:30:50 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Thu Oct 29 2026 14:21:21 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
