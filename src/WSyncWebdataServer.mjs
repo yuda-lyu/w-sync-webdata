@@ -460,13 +460,8 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
         return nowTableTags
     }
 
-    //updateTableTagFlush, 合併窗口屆滿時之寫檔與推播, 推播為nowTableTags
+    //updateTableTagFlush, 合併窗口屆滿時之寫檔與推播, 推播為nowTableTags; 釋放時clearSync已呼叫debounce之cancel丟棄未執行之任務, 故釋放後不會屆滿執行(此函數同步執行, 無跨釋放之未完成部分)
     let updateTableTagFlush = () => {
-
-        //check, wsemi之debounce無cancel, 釋放後已排入之任務於屆滿時在此略過
-        if (isCleared) {
-            return
-        }
 
         //writeTableTags
         writeTableTags()
@@ -476,11 +471,11 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
 
     }
 
-    //updateTableTagCore, 避免大量更新時造成大量推播, 通過wsemi之debounce合併(每10ms偵測, 於超過200ms未有更新時執行最後一筆任務); 持續有更新且間隔皆小於200ms時推播會延至更新停止後(無上限)
+    //updateTableTagCore, 避免大量更新時造成大量推播, 通過wsemi之debounce合併(每10ms偵測, 於超過200ms未有更新時執行最後一筆任務); 持續有更新且間隔皆小於200ms時推播會延至更新停止後(無上限); clearSync時呼叫其cancel立即停止偵測計時器並丟棄未執行之任務
     let optDebounce = {}
     if (trace) {
         optDebounce.onTrace = (e) => {
-            if (e.type === 'run' && !isCleared) {
+            if (e.type === 'run') {
                 trace('flush', { dropped: e.dropped })
             }
         }
@@ -519,13 +514,13 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
         nowTableTags[tableName] = genTag()
         isDirty = true
 
-        //trace
+        //updateTableTagCore
+        updateTableTagCore(updateTableTagFlush)
+
+        //trace, 於排入合併佇列之後呼叫, 回調內呼叫clearSync時其cancel才能取消此次排入之任務與偵測計時器
         if (trace) {
             trace('queued', { tableName })
         }
-
-        //updateTableTagCore
-        updateTableTagCore(updateTableTagFlush)
 
     }
 
@@ -544,7 +539,7 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
     function onChangeUpdateTableTag() {} onChangeUpdateTableTag()
 
     /**
-     * 釋放資源：取消待觸發之寫檔與推播及已排程之事件，並將尚未落檔之時間戳寫入檔案(不推播；檔案內容已非本實體最後寫入者代表已由其他實體接手，不覆寫)，之後各寫入類函數皆不作用且不再派發任何事件，讀取類函數照常，可重複呼叫。落檔失敗時於本函數內同步發出error事件。同一時間戳檔重建實體時，宜先釋放舊實體再建立新實體
+     * 釋放資源：取消待觸發之寫檔與推播及已排程之事件(合併窗口之偵測計時器於呼叫當下立即停止，不留存活計時器)，並將尚未落檔之時間戳寫入檔案(不推播；檔案內容已非本實體最後寫入者代表已由其他實體接手，不覆寫)，之後各寫入類函數皆不作用且不再派發任何事件，讀取類函數照常，可重複呼叫。落檔失敗時於本函數內同步發出error事件。同一時間戳檔重建實體時，宜先釋放舊實體再建立新實體
      *
      * @memberof WSyncWebdataServer
      * @returns {Undefined} 無回傳
@@ -585,6 +580,9 @@ function WSyncWebdataServer(instWConverServer, opt = {}) {
         //isCleared, 之後各寫入類函數皆不作用, 事件亦不再派發
         isCleared = true
         clearEmit()
+
+        //cancel, 立即停止合併窗口之偵測計時器並丟棄未執行之合併任務(其待寫之時間戳已於上方落檔); 不中止已開始執行之任務, 其為同步執行故無此情形
+        updateTableTagCore.cancel()
 
         //落檔失敗於此同步通知, 因釋放後不再派發任何事件故不可延後
         if (err) {

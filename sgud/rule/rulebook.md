@@ -71,7 +71,7 @@
 - 規則:兩端冪等;之後寫入類函數不作用、不再派發任何事件(含已排程者).前端另移除 window 具名監聽、結束各表與輪詢之等待與延遲(不 reject 外部 pm).伺服端另 cancel debounce,有待寫者於檔案不存在或仍為本實體最後寫入之內容時同步落檔,落檔失敗以 `emitNow` 同步發一則 error.
 - 單一擁有者:兩端之 `clearSync`;閘門在 `genEmit`.
 - 盤點:`git grep -n --untracked "if (isCleared\|if (isPolling || isCleared\|if (isCleared())" -- src` → 前端 setTableTags、refreshTable 結算、updateTableTags、pollingTableTags、clearSync;伺服端 writeTableTags、initTableTags、setTableTags、updateTableTag、clearSync;genEmit 之各派發點(已套).伺服端 readTableTags、getTableTags(刻意不套:讀取類照常).
-- 測試:K1–K6、C9/P8、P12、S10–S16、S18、S21.
+- 測試:K1–K6、C9/P8、P12、S10–S16、S18、S21、S23–S25(`cancel` 取消合併窗口之偵測計時器,見 R11 規則 5、7).
 
 ### R8 伺服端落檔
 
@@ -97,10 +97,10 @@
   2. 測試不以固定等待當肯定斷言之同步點:同步點為被測物公開事件(`waitEv`)、`onTrace` 事件(`tr.wait`)、測試監聽器被呼叫(`seen.wait`)或 promise;否定斷言(確認某事件不再發生)以排程次序柵欄 `fence()`(`test/tools/syncKit.mjs`,與被測物同為 wsemi `evEmitDelay` 1ms 計時器,先排先派)收尾,不以毫秒窗口.
   3. 「延遲多久」本身為規格者(合併窗口 200ms、`refreshTimeout`、`pollingDelayTime`、時序指紋 `syncdata`)以假時鐘 `useFakeClock`(`test/tools/timeKit.mjs`)驗證;防懸置上限一律用模組載入時保存之真實計時器(`traceRec` 的 guard、`within`).
   4. 公開事件由 `genEmit`(evEmitDelay)派發,`evEmitDelay` 不加 `onTrace`(主控 2026-10-29 裁定),測試改等被測物之公開事件或 `fence`.
-  5. 伺服端合併窗口由 wsemi `debounce`(每 10ms 偵測、超過 200ms 未更新時執行最後一筆任務)擔任,取代 lodash-es `debounce`;wsemi `debounce` 無 `cancel`,故 `clearSync` 後已排入之任務於屆滿時由 `updateTableTagFlush` 之 `isCleared` 略過,且偵測計時器至多再存活約 210ms 後自停.
+  5. 伺服端合併窗口由 wsemi `debounce`(每 10ms 偵測、超過 200ms 未更新時執行最後一筆任務)擔任,取代 lodash-es `debounce`;`clearSync` 無條件呼叫其回傳函數之 `cancel()`(wsemi ≥1.9.33,2026-10-30 起):當下立即清除偵測計時器並丟棄未執行之任務,不留存活計時器.因此 `updateTableTagFlush` 與 `onTrace` 轉發不再以 `isCleared` 守門(flush 為同步函數,不跨釋放;唯一在釋放後仍會執行該次任務者為 `onTrace('flush')` 回調內呼叫 `clearSync`,該次任務之寫檔與推播由 `writeTableTags` 與 `genEmit` 之釋放檢查略過,S25).`queued` 事件須在 `updateTableTagCore(...)` 排入**之後**通知,否則回調內呼叫 `clearSync` 時 `cancel` 取消不到此次排入(S24).
   6. 假時鐘視窗不得漏清真實計時器(2026-10-29 tm-syncwebdata2,「測完不退出」之根因):`node:test` `mock.timers` 取代之全域 `clearTimeout`/`clearInterval` 只認假計時器,對視窗前建立之真實計時器為空操作.前一案以真實時鐘排入 wsemi `debounce`,其偵測計時器見佇列已空時自行 `clearInterval` 若落入下一案之假時鐘視窗(S1→S1b),該真實 `setInterval(10ms)` 漏清而永久存活,mocha 寫出報告後行程不結束.故假時鐘一律經 `useFakeClock`(`test/tools/timeKit.mjs`),其以登記表區分假、真實計時器並將真實者轉交原生 clear;不直接 `mock.timers.enable`.回歸:`test/unit-timeKit.test.mjs` K1~K3.
-  7. 計時器洩漏必須在測試檔結束時失敗而非整個執行懸置,且 `clearSync` 後作用中之計時器須回到原值:各測試檔之 `describe` 以 `before` 的 `baselineTimers()` 記作用中計時器數、`after` 以 `settleTimers`(皆在 `test/tools/syncKit.mjs`,輪詢上限用真實計時器)等其回到基準——基準與等待須在同一狀態量測(皆已讓出一次 microtask):mocha 對 async 案/hook 於其回傳 promise 後才建立逾時計時器(未 unref,計入作用中計時器),同步段量測之數字不含它,直接比較會差 1 而於負載下偶發失敗(S23 曾 3/100);`clearSync` 之取消以同步量測斷言(`activeTimers()`,前後之間不讓出事件迴圈,不受負載影響):前端 K7(已排程之派發)、K7b(強制延遲計時器)、K7c(`refreshTimeout` 等待上限計時器),伺服端 S23(偵測計時器於窗口屆滿後自停).
-  8. 負載試驗須自動偵測「測完不退出」:`test/tools/loadTrial.mjs` 在 mocha 寫出報告後逾 `--hang-sec` 秒(預設 30)仍未結束者判失敗並樹殺;加 `--diag` 時各行程每秒記錄仍撐住行程之資源及其建立堆疊(`test/tools/loadPreload.mjs` 之 `WSEMI_LT_DIAG`),供定位.
+  7. 計時器洩漏必須在測試檔結束時失敗而非整個執行懸置,且 `clearSync` 後作用中之計時器須回到原值:各測試檔之 `describe` 以 `before` 的 `baselineTimers()` 記作用中計時器數、`after` 以 `settleTimers`(皆在 `test/tools/syncKit.mjs`,輪詢上限用真實計時器)等其回到基準——基準與等待須在同一狀態量測(皆已讓出一次 microtask):mocha 對 async 案/hook 於其回傳 promise 後才建立逾時計時器(未 unref,計入作用中計時器),同步段量測之數字不含它,直接比較會差 1 而於負載下偶發失敗(S23 曾 3/100);`clearSync` 之取消以同步量測斷言(`activeTimers()`,前後之間不讓出事件迴圈,不受負載影響):前端 K7(已排程之派發)、K7b(強制延遲計時器)、K7c(`refreshTimeout` 等待上限計時器),伺服端 S23(排入後未落檔)、S23b(已由 `writeTableTags` 落檔而合併佇列仍有任務,證明 `cancel` 為無條件呼叫)、S23d(從未排入、重複釋放),皆於 `clearSync` 當下以同步量測回到基準;S23c(窗口剛屆滿、偵測計時器待下次偵測才自停)與 S25(`onTrace('flush')` 回調內釋放)跨越等待或在偵測回呼內,改以釋放前後之差值斷言(S23c 差 2:偵測計時器+派發計時器;S25 差 1:正在執行回呼之偵測計時器),不用等待前取之基準——他處計時器(如前案洩漏者)於等待期間自行結束會抵銷而漏抓;S24(`onTrace('queued')` 回調內釋放)同步量測.
+  8. 負載試驗須自動偵測「測完不退出」:`test/tools/loadTrial.mjs` 在 mocha 寫出報告後逾 `--hang-sec` 秒(預設 30,別名 `--exit-grace`)仍未結束者判失敗並樹殺,`--run-max`(預設 900 秒,0 為不限)為單次上限;加 `--diag` 時各行程每秒記錄仍撐住行程之資源及其建立堆疊(`test/tools/loadPreload.mjs` 之 `WSEMI_LT_DIAG`,測試可呼叫 `globalThis.__ltDiagDump(tag)` 另存快照),供定位.**這兩檔為 wsemi 統一版(wsemi ≥1.9.33 之 `test/tools/`),須同時整份複製、不各自修改**(環境變數 `WSEMI_LT_*` 為兩檔之間之約定);需擴充者回報 wsemi.本套件自行擴充之 `--diag`、`--hang-sec`、`--run-max`、`__ltDiagDump` 已於 2026-10-30 收回 wsemi 統一版.升版時以 `cmp node_modules/wsemi/test/tools/loadTrial.mjs test/tools/loadTrial.mjs`(與 `loadPreload.mjs`)確認位元組相同.
 - 事件全集:
 
 | 端 | type | 欄位 | 意義 |
@@ -113,7 +113,7 @@
 | 前端 | `delayEnd` | `reason:'elapsed'|'cleared'` | 強制延遲結束;`cleared` 於 `clearSync` 呼叫期間同步發出 |
 
 - 站點全集(`git grep -n --untracked "setTimeout\|setInterval\|debounce(" -- src`):伺服端 `debounce`(已套);前端 `refreshTable` 計時器、`pollingTableTags` 逾時計時器與強制延遲計時器(已套);`genEmit` 之 `evEmitDelay`(刻意不套,見規則 4).
-- 測試:`test/unit-WSyncWebdataServer.test.mjs`(S1/S1b/S1c 及 S4~S22 事件同步、S16b、S23、`opt.onTrace` P3/P4 六案)、`test/unit-WSyncWebdataClient.test.mjs`(C 類案改事件同步、T1/T1b/T1c/T2b/T2c/D1/C16/P12/K7/K7b/K7c、`opt.onTrace` P3/P4 六案)、`test/syncdata.test.mjs`(假時鐘)、`test/unit-timeKit.test.mjs`(K1~K3,假時鐘工具之回歸);變異執行器與清單在工作目錄 `tmp/tm-syncwebdata/mutate.mjs`(單項與成對變異,結果與意義見 `sgud/state/state.md`).變異之成對項(P01~P04)用以以實驗證明「單獨存活者為兩道防線重疊之等價」:單獨移除任一道皆存活,成對移除即被既有案擊殺.
+- 測試:`test/unit-WSyncWebdataServer.test.mjs`(S1/S1b/S1c 及 S4~S22 事件同步、S16b、S23/S23b/S23c/S23d/S24/S25〔`clearSync` 取消 `debounce`,2026-10-30〕、`opt.onTrace` P3/P4 六案)、`test/unit-WSyncWebdataClient.test.mjs`(C 類案改事件同步、T1/T1b/T1c/T2b/T2c/D1/C16/P12/K7/K7b/K7c、`opt.onTrace` P3/P4 六案)、`test/syncdata.test.mjs`(假時鐘)、`test/unit-timeKit.test.mjs`(K1~K3,假時鐘工具之回歸);變異執行器與清單在工作目錄 `tmp/tm-syncwebdata/mutate.mjs`(單項與成對變異,結果與意義見 `sgud/state/state.md`).變異之成對項(P01~P04)用以以實驗證明「單獨存活者為兩道防線重疊之等價」:單獨移除任一道皆存活,成對移除即被既有案擊殺.
 - 負載基準(改造前,2026-10-29 06:13–06:27,`--lock-exclusive`,摘要 `tmp/quiet-run/20261029-060341-tm-syncwebdata-load-before.log`):CPU 壓力 8 行程 ×10:`syncdata` 3/10 失敗;事件迴圈阻塞 400:1000 ×10:`syncdata` 10/10、S4 7/10 失敗;重度阻塞 1500:3000 ×8:0 失敗.
 
 ## 2. 已知限制(刻意,已寫入 JSDoc)
@@ -125,7 +125,7 @@
 - 被取代之批次,其 afterUpdateTableTags 可能早於該表資料送達.
 - 釋放前已提交之時間戳,其 getData 若尚未派發則不再派發.
 - 前端 setTableTags 之物件直接作為內部狀態(之後就地修改);伺服端 getTableTags 回傳內部狀態、`useInputOnly` 保存傳入之參照.
-- 伺服端 debounce 無上限:持續有更新且間隔皆小於 200ms 時,推播延至更新停止後.合併窗口改由 wsemi `debounce` 擔任(2026-10-29):每 10ms 偵測,實際於最後一次更新後 200~210ms 內觸發(原 lodash 為恰 200ms);無 `cancel`,`clearSync` 後其偵測計時器至多再存活約 210ms.
+- 伺服端 debounce 無上限:持續有更新且間隔皆小於 200ms 時,推播延至更新停止後.合併窗口改由 wsemi `debounce` 擔任(2026-10-29):每 10ms 偵測,實際於最後一次更新後 200~210ms 內觸發(原 lodash 為恰 200ms);`clearSync` 呼叫 wsemi `debounce` 之 `cancel()`(wsemi ≥1.9.33,2026-10-30 起)立即停止偵測計時器並丟棄未執行之任務.
 - 表名不得為 `__proto__`;同一事件物件只能建立一個同步器,重建前須先 clearSync;上層掛於 ORM 之監聽由上層移除.
 
 ## 3. 可見行為變更紀錄
@@ -140,6 +140,11 @@
 
 - 新增:前後端 `opt.onTrace`(事件見 R11);相依 `wsemi` 升至 ^1.9.29.
 - 變更(非破壞性):伺服端合併窗口由 lodash-es `debounce`(恰 200ms)改為 wsemi `debounce`(每 10ms 偵測,實際 200~210ms),推播最多晚 10ms;`clearSync` 不再取消計時器而於屆滿時略過,其偵測計時器至多再存活約 210ms.未傳 `onTrace` 時其餘對外行為不變.
+
+### 2026-10-30(wsemi 1.9.33 接入輪,a-syncweb)
+
+- 變更(非破壞性,對外 API 與事件不變):伺服端 `clearSync` 改呼叫 wsemi `debounce` 之 `cancel()`,偵測計時器於呼叫當下立即清除(原至多再存活約 210ms 才自停);釋放後已排入之任務不再屆滿執行(原由 `isCleared` 略過).`onTrace` 之 `queued` 事件改於排入合併佇列之後通知(原在其前;僅影響回調內呼叫 `clearSync` 之情形:原會使偵測計時器於釋放後重新啟動並存活至屆滿).相依 `wsemi` 升至 ^1.9.33.
+- 測試:負載執行器 `test/tools/loadTrial.mjs`、`loadPreload.mjs` 改為 wsemi 統一版整份複製(R11 規則 8).
 
 ## 4. 測試與驗收對應
 

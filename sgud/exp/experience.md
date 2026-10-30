@@ -102,8 +102,8 @@
 
 ### E17 wsemi `debounce` 無 `cancel`,且觸發時刻為 200~210ms(2026-10-29)
 
-- 事實:`wsemi/src/debounce.mjs` 以 `setInterval(10)` 偵測、`tDiff > ms` 才執行最後一筆任務,無 `cancel`;釋放後已排入之任務會在屆滿時執行.
-- 做法:任務內先檢查 `isCleared`(`updateTableTagFlush`),觀察回調轉發前亦檢查;偵測計時器至多再存活約 210ms 後自停(佇列空時 `clearInterval`).假時鐘案以「推進 199ms 尚未 flush、再推進超過 10ms 後 flush」表達窗口,不寫死 200ms 整.
+- 事實:`wsemi/src/debounce.mjs` 以 `setInterval(10)` 偵測、`tDiff > ms` 才執行最後一筆任務;1.9.29 無 `cancel`(1.9.33 起有,見 E22),釋放後已排入之任務會在屆滿時執行.
+- 做法(1.9.29 時期,已被 E22 取代):任務內先檢查 `isCleared`(`updateTableTagFlush`),觀察回調轉發前亦檢查;偵測計時器至多再存活約 210ms 後自停(佇列空時 `clearInterval`).假時鐘案以「推進 199ms 尚未 flush、再推進超過 10ms 後 flush」表達窗口,不寫死 200ms 整.
 
 ### E18 以同機制之哨兵作排程次序柵欄(2026-10-29)
 
@@ -123,9 +123,19 @@
 
 - 事實:`process.getActiveResourcesInfo()` 每個未 unref 的 `Timeout` 各算一筆;兩次量測之間不 `await`(或僅 microtask 續行)時,他處計時器不會到期,數字為決定性,負載下亦同.
 - 做法:`syncKit.activeTimers()`;前端 K7(已排程之派發被 `clearEmit` 取消,排程後 `> n0`、釋放後 `=== n0`)、K7b(`delayStart` 事件之續行為 microtask,釋放後恰少 1 筆強制延遲計時器)、K7c(`refreshTimeout` 等待上限計時器恰少 1 筆).被 C19、C11、C22 三個變異擊殺,其中 C11 前一輪判為等價(讀碼推論),實為可觀察的(計時器多存活至逾時).
-- 限制:伺服端 wsemi `debounce` 無 `cancel`,偵測計時器無法在 `clearSync` 當下取消,只能以 `settleTimers` 等其自停(S23).
+- 限制(2026-10-30 已由 E22 解除):伺服端 wsemi `debounce` 無 `cancel`,偵測計時器無法在 `clearSync` 當下取消,只能以 `settleTimers` 等其自停(S23).
 - 陷阱(S23 曾於事件迴圈阻塞下 3/100 偶發失敗):mocha 對 async 案/hook 於其**回傳 promise 後**才建立逾時計時器(`Runnable.resetTimeout`,未 unref,計入 `getActiveResourcesInfo` 之 `Timeout`),同步段量測 0、第一次 `await` 後為 1;以同步段取基準、讓出後再比較會恆差 1.診斷:`loadPreload` 之 `__ltDiagDump` 於 `settleTimers` 等逾 2 秒時存快照,失敗當下僅餘 mocha 自身逾時計時器(`idle=180000`)與輪詢計時器,debounce 偵測計時器已停(產品無誤).改為 `baselineTimers()`(讓出一次後量測)與 `settleTimers`(起首讓出一次)同狀態比較,修後伺服端測試檔於阻塞 400:1000 下 0/150 失敗.純 delta 式斷言(K7 系列,前後之間不 `await`)不受此影響.
 
 ### E21 單獨存活之變異用「成對變異」以實驗判等價(2026-10-29)
 
 - 做法:兩道防線重疊者(C20 與 C11、S03 與 writeTableTags/genEmit 之已釋放檢查、G01 與派發當下檢查),單獨移除任一道皆存活;成對移除(`mutate.mjs` 之 P01~P04)若被既有案擊殺,即證明該案抓得到此行為、單獨存活為設計重疊而非測試缺口.不以讀碼推論代替.
+
+### E22 接入 wsemi `debounce.cancel`:守門移除之條件、重入情形與跨等待量測(2026-10-30,a-syncweb)
+
+- 事實:wsemi ≥1.9.33 之 `debounce` 回傳函數帶 `cancel()`:清偵測計時器、丟棄佇列、發 `cancel` 事件(`dropped`、`stopped`);不中止已開始執行之任務;`cancel` 後再呼叫則重新排入並重啟偵測.任務由 `pm2resolve` 同步呼叫(同一 tick 內),故 `updateTableTagFlush`(同步函數)不跨釋放.
+- 守門可否移除:`updateTableTagFlush` 與 `onTrace` 轉發之 `isCleared` 守門在 `cancel` 後無可觀察作用而移除——釋放後偵測計時器已清除,屆滿不會再來;唯一在釋放後仍執行該次任務之路徑是 `onTrace('flush')` 回調內呼叫 `clearSync`(`trace('flush')` 在偵測回呼內、任務執行之前),該次任務由 `writeTableTags` 與 `genEmit` 之既有釋放檢查略過(S25).變異 M05(回復守門且保留 `cancel`)與現況 30/30、25/25 全綠,證明移除守門為等價.
+- 重入陷阱:`queued` 事件原在 `updateTableTagCore(...)` 之**前**通知;回調內呼叫 `clearSync` 時 `cancel` 在尚無計時器時執行,其後才排入並啟動偵測計時器,釋放後仍存活至屆滿.改為排入之後通知(S24;變異 M03 擊殺).
+- 量測陷阱:跨等待(等 `flush` 事件約 200ms)的 `activeTimers() === n0` 不可靠——等待期間他處計時器(如變異下前案洩漏者)自行結束會抵銷本實體之殘留而漏抓(M01 下 S23c 曾 1/2 次綠).改為釋放前後之差值(S23c 差 2、S25 差 1),兩次量測之間不讓出,與他處計時器無關.
+- 工作樹 `src/*.mjs` 為 CRLF(git autocrlf,索引為 LF):變異執行器之 LF 錨點須先把原始碼正規化為 LF,否則多行錨點 0 命中;`grep -c $'\r'` 在 Git Bash 回 0 不可靠,以 `git ls-files --eol` 或 node 計數為準.
+- 變異(`tmp/a-syncweb/mutate.mjs`,新舊測試各跑):M01 不呼叫 `cancel`——新 7 紅(S1c、S23、S23b、S23c、S24、S25、P4)、舊 2 紅(S1c、P4,因同時移除了守門);M04 修前等價(不呼叫 `cancel` 並回復守門)——新 5 紅、舊 0 紅;M02 `cancel` 只在有待落檔時呼叫——新 2 紅(S23b、S23c)、舊 0 紅;M03 `queued` 回復為排入之前——新 1 紅(S24)、舊 0 紅;M05、M06(重複呼叫 `cancel`)皆全綠.
+- 負載執行器:`loadTrial.mjs`、`loadPreload.mjs` 自 wsemi `test/tools/` 整份複製(位元組相同,不各自修改);本套件實跑:`--lag 400:1000 --runs 3 --hang-sec 30 --run-max 600 --diag` 與 `--lag 1500:3000 --runs 3` 對伺服端測試檔各 3/3 輪 30 passing、皆自行退出(`exitAfterReportMs` 約 10~19ms).

@@ -92,7 +92,7 @@ let mkServer = (opt = {}) => {
 
 describe('WSyncWebdataServer', function() {
 
-    //n0, 測前作用中之計時器數; 測完須回到此值(否則行程不會結束), 失敗時指出而非整個執行懸置; 伺服端合併窗口之偵測計時器(wsemi debounce無cancel)於佇列清空後自停, 故以輪詢等待
+    //n0, 測前作用中之計時器數; 測完須回到此值(否則行程不會結束), 失敗時指出而非整個執行懸置; 伺服端合併窗口之偵測計時器於佇列清空後自停(未釋放者)或於clearSync時由wsemi debounce之cancel立即清除, 故以輪詢等待
     let n0 = 0
 
     before(async function() {
@@ -151,7 +151,7 @@ describe('WSyncWebdataServer', function() {
     })
 
     it('S1c 釋放後合併窗口屆滿不寫檔不推播, 不再呼叫觀察回調(假時鐘)', async function() {
-        //規格: clearSync後各寫入類函數不作用且不再派發任何事件; wsemi之debounce無cancel, 已排入之任務於屆滿時以isCleared略過
+        //規格: clearSync後各寫入類函數不作用且不再派發任何事件; clearSync呼叫wsemi debounce之cancel丟棄已排入之任務, 故屆滿時不執行(不寫檔、不推播、不呼叫觀察回調); 計時器立即清除見S23~S25
         let clock = useFakeClock(0)
         try {
             let fp = fpOf()
@@ -384,8 +384,8 @@ describe('WSyncWebdataServer', function() {
         assert.strict.equal(of('error').length, 1)
     })
 
-    it('S23 clearSync後作用中之計時器於合併窗口屆滿後回到釋放前之數量(wsemi debounce無cancel, 偵測計時器自停, 不留存活計時器)', async function() {
-        //規格R11規則5: 偵測計時器至多再存活約210ms後自停; 計時器數以同步量測(排程後增加)與輪詢回到基準(自停)判定, 輪詢之防懸置上限用真實計時器
+    it('S23 clearSync當下(同步)偵測計時器即被取消, 作用中之計時器數回到排入前(wsemi debounce之cancel, 不留存活計時器)', async function() {
+        //規格R11規則5、R7: clearSync呼叫debounce之cancel, 偵測計時器於呼叫當下立即清除(修前無cancel: 至多再存活約210ms才自停); 計時器數以同步量測, 前後之間不讓出事件迴圈, 不依賴經過多少毫秒、不輪詢
         //基準須在讓出一次之後取(此時mocha對本案之逾時計時器已建立並計入, 與settleTimers之量測同一狀態); 同步段取之基準不含該計時器, 會讓「回到基準」恆差1而偶發失敗(2026-10-29 負載試驗3/100)
         let n0 = await baselineTimers()
         let { s } = mkServer()
@@ -393,7 +393,115 @@ describe('WSyncWebdataServer', function() {
         s.updateTableTag('A') //排入合併佇列, 偵測計時器啟動
         assert.ok(activeTimers() > n0, '量測有效: 排入後作用中之計時器數增加')
         s.clearSync()
-        await settleTimers(n0, 'S23')
+        assert.strict.equal(activeTimers(), n0)
+    })
+
+    it('S23b clearSync不論有無待寫皆取消偵測計時器(待寫旗標已清除而合併佇列仍有任務者)', async function() {
+        //規格R7: cancel為無條件呼叫, 不隨「有無待落檔之時間戳」而定; writeTableTags落檔後待寫旗標清除, 但合併佇列之任務仍待屆滿
+        let n0 = await baselineTimers()
+        let { s, read } = mkServer()
+        s.initTableTags({ A: 'a0' }, 'useInputOnly')
+        s.updateTableTag('A')
+        s.writeTableTags() //待寫旗標清除, 合併佇列之任務仍在
+        assert.strict.deepEqual(read(), { A: 't1' })
+        assert.ok(activeTimers() > n0, '量測有效: 合併佇列之任務仍在, 偵測計時器作用中')
+        s.clearSync() //無待落檔者, 不寫檔, 仍須取消
+        assert.strict.equal(activeTimers(), n0)
+    })
+
+    it('S23c 合併窗口剛屆滿後(佇列已空, 偵測計時器待下次偵測才自停)clearSync亦立即取消偵測計時器與已排程之派發', async function() {
+        //規格R7: 屆滿後至偵測計時器自停(約10ms)之間釋放者, 修前該計時器仍存活至下次偵測; 同步點為flush事件, 續行時該次偵測回呼已執行完畢(寫檔完成、changeTableTags派發已排程)
+        //以釋放前後之差值斷言(兩次量測之間不讓出, 不受他處計時器於等待期間增減之影響): 此刻本實體作用中之計時器為二(偵測計時器待下次偵測才自停; changeTableTags之派發計時器, genEmit以evEmitDelay排程1ms), 釋放後皆須清除; 修前只清除派發計時器(差1)
+        let { s, of, tr } = mkServer()
+        s.initTableTags({ A: 'a0' }, 'useInputOnly')
+        s.updateTableTag('A')
+        await tr.wait((e) => e.type === 'flush')
+        let nOpen = activeTimers()
+        s.clearSync()
+        let nClosed = activeTimers()
+        assert.strict.equal(nOpen - nClosed, 2)
+        await fence() //已排程之派發於釋放時取消, 柵欄完成時若仍派發其已在此之前
+        assert.strict.deepEqual(of('changeTableTags'), [])
+    })
+
+    it('S23d 從未排入任務時clearSync不留計時器, 重複呼叫無妨', async function() {
+        //規格R7: cancel於無待執行任務(偵測計時器未啟動)時呼叫無妨, clearSync兩端冪等
+        let n0 = await baselineTimers()
+        let { s } = mkServer()
+        s.initTableTags({ A: 'a0' }, 'useInputOnly')
+        assert.strict.equal(activeTimers(), n0)
+        s.clearSync()
+        s.clearSync()
+        assert.strict.equal(activeTimers(), n0)
+    })
+
+    it('S24 於onTrace之queued回調內呼叫clearSync: 此次排入之任務與偵測計時器一併取消, 待寫之時間戳由clearSync落檔', async function() {
+        //規格(onTrace JSDoc): queued為「updateTableTag已接受並排入合併佇列」, 故於排入之後才通知; 回調內釋放時cancel才取消得到此次排入之任務(若先通知再排入, 釋放後偵測計時器重新啟動而存活至屆滿)
+        let n0 = await baselineTimers()
+        let fp = fpOf()
+        let tr = traceRec()
+        let s = null
+        s = new WSyncWebdataServer(w.evem(), {
+            fpTableTags: fp,
+            genTag: () => 't1',
+            onTrace: (e) => {
+                tr.on(e)
+                if (e.type === 'queued') {
+                    s.clearSync()
+                }
+            },
+        })
+        let seen = []
+        s.on('changeTableTags', (msg) => {
+            seen.push(msg)
+        })
+        s.on('error', (msg) => {
+            seen.push(msg)
+        })
+        s.initTableTags({ A: 'a0' }, 'useInputOnly')
+        s.updateTableTag('A')
+        assert.strict.equal(activeTimers(), n0)
+        assert.strict.deepEqual(JSON.parse(fs.readFileSync(fp, 'utf8')), { A: 't1' })
+        await fence()
+        assert.strict.deepEqual(seen, [])
+        assert.strict.deepEqual(tr.types(), ['queued'])
+    })
+
+    it('S25 於onTrace之flush回調內呼叫clearSync(合併窗口屆滿、任務即將執行時釋放): 待寫之時間戳由clearSync落檔, 該次不再推播, 無存活計時器', async function() {
+        //規格R7: 釋放後不再派發任何事件; flush回調於偵測回呼內呼叫、其後該次任務才執行, 此時cancel已清除偵測計時器, 該次任務之寫檔與推播由writeTableTags與genEmit之釋放檢查略過
+        //計時器以回調內釋放前後之差值斷言(兩次量測之間不讓出, 不受他處計時器增減之影響): 此刻本實體作用中之計時器為一(正在執行回呼之偵測計時器, 派發計時器尚未排程), 釋放後須清除
+        let fp = fpOf()
+        let tr = traceRec()
+        let s = null
+        let nOpen = -1
+        let nClosed = -1
+        s = new WSyncWebdataServer(w.evem(), {
+            fpTableTags: fp,
+            genTag: () => 't1',
+            onTrace: (e) => {
+                tr.on(e)
+                if (e.type === 'flush') {
+                    nOpen = activeTimers()
+                    s.clearSync()
+                    nClosed = activeTimers()
+                }
+            },
+        })
+        let seen = []
+        s.on('changeTableTags', (msg) => {
+            seen.push(msg)
+        })
+        s.on('error', (msg) => {
+            seen.push(msg)
+        })
+        s.initTableTags({ A: 'a0' }, 'useInputOnly')
+        s.updateTableTag('A')
+        await tr.wait((e) => e.type === 'flush') //續行時該次偵測回呼已執行完畢(含回調內之clearSync與其後該次任務)
+        assert.strict.equal(nOpen - nClosed, 1)
+        assert.strict.deepEqual(JSON.parse(fs.readFileSync(fp, 'utf8')), { A: 't1' })
+        await fence()
+        assert.strict.deepEqual(seen, [])
+        assert.strict.deepEqual(tr.types(), ['queued', 'flush'])
     })
 
 })

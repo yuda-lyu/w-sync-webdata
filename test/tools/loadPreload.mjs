@@ -1,7 +1,8 @@
 //loadPreload.mjs: 負載試驗之預載模組, 由loadTrial以NODE_OPTIONS之--import載入測試行程(含mocha平行之各worker與測試所起之node子行程)
 //  WSEMI_LT_LAG='L:P': 每P毫秒阻塞事件迴圈L毫秒(可重現之事件迴圈延遲); 計時器為unref, 不撐住行程, 亦不計入process.getActiveResourcesInfo
 //  WSEMI_LT_PROBE=<資料夾>: 量測本行程之事件迴圈延遲(monitorEventLoopDelay), 每秒與結束時寫入<資料夾>/probe-<pid>.json, 作為負載之證據
-//  WSEMI_LT_DIAG=<資料夾>: 追蹤仍撐住行程之資源及其建立堆疊, 每秒寫入<資料夾>/diag-<pid>.json, 供「測完不退出」時定位(見下)
+//  WSEMI_LT_DIAG=<資料夾>: 追蹤仍撐住行程之資源及其建立堆疊, 每秒與結束時寫入<資料夾>/diag-<pid>.json, 供「測完不退出」時定位(見下); 測試可於偵測到異常當下呼叫globalThis.__ltDiagDump(tag)另存當下快照
+//  (各套件自wsemi複製本檔與loadTrial.mjs, 兩檔須同時複製: 環境變數名稱為兩檔之間之約定)
 import fs from 'fs'
 import path from 'path'
 import { createHook } from 'async_hooks'
