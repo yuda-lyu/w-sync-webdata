@@ -41,7 +41,7 @@
 ### E06 error 事件之兩種無聲(2026-10-13)
 
 - 事實:eventemitter3 對無監聽者之 `emit('error')` 只回 false(失敗無聲);Node EventEmitter 則拋 `ERR_UNHANDLED_ERROR`.wsemi `evEmit` 之通報路徑呼叫 `ev.listenerCount('error')`(`evEmit.mjs:92`),傳入只有 emit 之物件時會拋錯而只剩 console.
-- 做法:本套件自發之 error 二擇一(有監聽者 emit,否則 `console.error('[w-sync-webdata]', …)`);交給 wsemi 之物件以門面提供 `listenerCount`(不可得時視為有監聽者).
+- 做法:本套件自發之 error 二擇一(有監聽者 emit,否則經 `diag` 輸出——2026-10-31 起預設 `console.error('[w-sync-webdata] <固定詞彙>', { errType })`,原為整個內容,見 E23);交給 wsemi 之物件以門面提供 `listenerCount`(不可得時視為有監聽者).
 
 ### E07 timer 內派發一律經 wsemi evEmitDelay(2026-10-13 已修)
 
@@ -139,3 +139,12 @@
 - 工作樹 `src/*.mjs` 為 CRLF(git autocrlf,索引為 LF):變異執行器之 LF 錨點須先把原始碼正規化為 LF,否則多行錨點 0 命中;`grep -c $'\r'` 在 Git Bash 回 0 不可靠,以 `git ls-files --eol` 或 node 計數為準.
 - 變異(`tmp/a-syncweb/mutate.mjs`,新舊測試各跑):M01 不呼叫 `cancel`——新 7 紅(S1c、S23、S23b、S23c、S24、S25、P4)、舊 2 紅(S1c、P4,因同時移除了守門);M04 修前等價(不呼叫 `cancel` 並回復守門)——新 5 紅、舊 0 紅;M02 `cancel` 只在有待落檔時呼叫——新 2 紅(S23b、S23c)、舊 0 紅;M03 `queued` 回復為排入之前——新 1 紅(S24)、舊 0 紅;M05、M06(重複呼叫 `cancel`)皆全綠.
 - 負載執行器:`loadTrial.mjs`、`loadPreload.mjs` 自 wsemi `test/tools/` 整份複製(位元組相同,不各自修改);本套件實跑:`--lag 400:1000 --runs 3 --hang-sec 30 --run-max 600 --diag` 與 `--lag 1500:3000 --runs 3` 對伺服端測試檔各 3/3 輪 30 passing、皆自行退出(`exitAfterReportMs` 約 10~19ms).
+
+## 六、診斷輸出(2026-10-31,syncweb,排程第 158 項)
+
+### E23 無 error 監聽者時之 console 輸出:預設只出固定標籤與安全摘要,wsemi 端另有殘餘站點
+- 事實:原 `genEmit.deliver` 於無 error 監聽者時 `console.error('[w-sync-webdata]', msg)`,`msg` 為整個事件內容(`err` 為使用端 `refreshTable`/`refreshTags` 之拒絕值、監聽器拋出值、被拒收之輸入值或含路徑之 fs 錯誤;另有 `tableName`、`timeTag`).夾帶哨兵字串之 14 個站點觸發案,修前 13 個之預設輸出全文含哨兵(第 14 個為序列化失敗,其訊息本無哨兵,後改以 `toJSON` 拋錯夾帶).wsemi `evEmit.mjs:96/101`(監聽器拋錯且無 error 監聽者、或 error 監聽器自身拋錯)與 `debounce.mjs:184`(任務拋出值)亦原樣輸出,屬 wsemi 端,見 `agent-out/syncweb-建議wsemi修正.md`(P1~P4 實證).
+- 做法:`genEmit(ev, isCleared, diag)`,`diag = getDiag(opt)`(前後端建構時建);label 取 `msg.msg` 冒號前之固定詞彙(冒號後為表名),safe 為 `diag.brief(msg.err)`,細節 `() => msg`,level `'error'`.不宣告 `safeKeys`(`tableName`、`timeTag` 不入預設輸出).`getDiag(opt)` 自讀 `logDetail`(僅 `true`)與 `funLog`(函數),型別不符視同未給,不另加檢核(本套件 `opt` 慣例為寬鬆回退預設).
+- 陷阱:(1) 細節內 fs 錯誤訊息之路徑由 wsemi `getDiag` 之內建樣式遮為 `open '***'`(不須宣告 `paths`),測試之「細節含哨兵」對路徑類站點不成立,改以錯誤代碼(`EISDIR`、`ENOENT`)為標記;(2) 靜態掃描「src 除註解外不呼叫 console」須處理 CRLF(行註解之正則不可以 `$` 錨定行尾,否則 CRLF 之檔其行註解不被剝除而誤報);(3) 先寫「預設輸出不含哨兵」再寫「標籤形狀」斷言,否則修前紅被標籤格式之失配遮住、看不出洩漏本身;(4) 站點測試須讓哨兵同時出現在 `err` 訊息、表名、時間戳(皆為各站點實有之資料),否則某站點之洩漏不被偵測.
+- 變異(執行器 `mutate.mjs` 留存於主控任務夾 `dnow/20261031101856/agent-out/syncweb-evidence/`;於 `./tmp/syncweb/m/<id>/` 副本變異不動 src,13 項):M01 還原修正(新測 45 紅、舊 L4/S22 各 1 紅)、M02 標籤不截冒號、M03 safe 之 errType 帶 err 字串、M04 level 改 log、M05 不傳 opt 給 getDiag、M06 不給細節、M07/M08 建構提示回 console.log、M09 移除無監聽者判斷、M10 `emitNow` 不經 `deliver`、M11 新增直接 console、M12 有監聽者時仍輸出、M13 safe 之 errCode 取 err.code 原值——13/13 擊殺,對照 M00 49/49 綠.副本變異法:複製 `src` 與必要測試至副本資料夾,於副本內以 `--no-parallel` 跑 mocha(模組解析向上走到套件根之 `node_modules`,不須連結).
+- 下游:w-serv-webdata(唯一直接依賴者)以 `new WSyncWebdataClient(instWConverClient)`(`WServWebdataClient.mjs:287`)與 `new WSyncWebdataServer(instWConverServer, { fpTableTags, genTag })`(`WServWebdataServer.mjs:515`)建立,未傳 `opt`,故升版後其未掛 error 監聽者時之同步錯誤預設為安全摘要(不再含權杖);其自身之 `logDetail`/`funLog` 未轉送給本套件.若轉送,宜包經其自有 `diag`(帶權杖簿遮罩)再交給使用端,不可直接把使用端之 `funLog` 交給本套件(其細節只經 wsemi 內建樣式遮罩,不含該套件之權杖簿).

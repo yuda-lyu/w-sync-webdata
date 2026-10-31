@@ -4,7 +4,7 @@ import isobj from 'wsemi/src/isobj.mjs'
 import isfun from 'wsemi/src/isfun.mjs'
 
 
-//tag, wsemi於console.error之前綴
+//tag, 本套件之標籤(診斷輸出之固定標籤前綴, 亦為wsemi於console.error之前綴)
 let tag = 'w-sync-webdata'
 
 
@@ -12,8 +12,9 @@ let tag = 'w-sync-webdata'
 //  一律交由wsemi之evEmit/evEmitDelay派發: 以timer脫勾1ms(維持既有時序)後於新堆疊內以try攔截監聽器之同步拋錯,
 //  直接以setTimeout包ev.emit時, 監聽器之同步拋錯即成uncaughtException而殺行程(見wsemi之evem.mjs、evEmit.mjs)
 //  輸入ev為事件物件, isCleared為是否已釋放之判斷函數, 已釋放者一律不派發(含釋放前已排程者)
+//  輸入diag為wsemi getDiag所建之診斷輸出函數(由前後端依使用端opt.logDetail與opt.funLog建立), 無error監聽者時之輸出一律經它, 預設只出固定標籤與安全摘要
 //  回傳emit(一般事件)、emitPm(帶pm之事件)、emitNow(同步派發且不受已釋放之限制, 供釋放時通報自身之錯誤)、clear(取消已排程之派發)
-function genEmit(ev, isCleared) {
+function genEmit(ev, isCleared, diag) {
 
     //listenerCount, 事件物件無listenerCount時(僅有emit者)視為有監聽者
     let listenerCount = (name) => {
@@ -48,9 +49,11 @@ function genEmit(ev, isCleared) {
             }
         }
 
-        //無error監聽者時改以console.error輸出, 失敗不可無聲, 且Node之EventEmitter於無監聽者時emit('error')會拋錯
+        //無error監聽者時改經diag輸出(預設console.error), 失敗不可無聲, 且Node之EventEmitter於無監聽者時emit('error')會拋錯
+        //  error內容之err、tableName、timeTag等可能含權杖、使用者識別或資料值, 預設只出固定標籤(msg冒號前之固定詞彙)與錯誤類型之安全摘要, 完整內容僅於opt.logDetail或opt.funLog取得
         if (listenerCount('error') === 0) {
-            console.error(`[${tag}]`, msg)
+            let label = isobj(msg) && typeof msg.msg === 'string' ? msg.msg.split(':')[0] : 'error'
+            diag(`[${tag}] ${label}`, diag.brief(isobj(msg) ? msg.err : undefined), () => msg, 'error')
             return false
         }
 

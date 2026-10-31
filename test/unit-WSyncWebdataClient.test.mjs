@@ -706,7 +706,7 @@ describe('WSyncWebdataClient', function() {
         assert.strict.equal(st.logs.length, 1)
     })
 
-    it('L4 無error監聽者時本套件之error改以console.error輸出', async function() {
+    it('L4 無error監聽者時本套件之error改以console.error輸出(預設只含固定標籤與安全摘要, 細節見unit-diag)', async function() {
         let st = stubConsoleError()
         try {
             let c = new WSyncWebdataClient(w.evem(), {})
@@ -720,8 +720,7 @@ describe('WSyncWebdataClient', function() {
             st.restore()
         }
         assert.strict.equal(st.logs.length, 1)
-        assert.strict.equal(st.logs[0][0], '[w-sync-webdata]')
-        assert.strict.equal(st.logs[0][1].msg, 'can not get table data: A')
+        assert.strict.deepEqual(st.logs[0], ['[w-sync-webdata] can not get table data', { errType: 'Error' }]) //固定標籤(不含表名)與安全摘要(不含err訊息)
     })
 
     it('N2 事件物件為Node之EventEmitter且無error監聽者時, 失敗不使行程崩潰', async function() {

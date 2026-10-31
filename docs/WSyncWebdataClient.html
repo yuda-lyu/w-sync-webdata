@@ -80,7 +80,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataClient.mjs.html">WSyncWebdataClient.mjs</a>, <a href="WSyncWebdataClient.mjs.html#line239">line 239</a>
+        <a href="WSyncWebdataClient.mjs.html">WSyncWebdataClient.mjs</a>, <a href="WSyncWebdataClient.mjs.html#line242">line 242</a>
     </li></ul></dd>
     
 
@@ -380,6 +380,86 @@
 
         <tr>
             
+                <td class="name"><code>logDetail</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Boolean</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    <code>false</code>
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入診斷輸出是否還原為遮罩後之完整細節，只有布林true才生效，預設false(只輸出固定標籤與安全摘要)</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>funLog</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    <code>null</code>
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入診斷輸出函數，格式為(label, safe, detail)=&gt;{}，給予時診斷輸出只交給它而不寫console，label為固定標籤，safe為只含errType與errCode之摘要，detail為遮罩後之完整細節(含錯誤訊息、表名、時間戳與輸入值，供使用端遮罩或轉送)；其拋錯與回傳promise之reject皆被吞下，預設null</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
                 <td class="name"><code>onTrace</code></td>
             
 
@@ -446,7 +526,7 @@
 
         
 <div class="param-desc">
-    <p>回傳前端資料同步物件，可監聽事件refreshTags、beforeUpdateTableTags、refreshState、refreshTable、getData、afterUpdateTableTags、error，可使用函數setTableTags、updateTableTags、pollingTableTags、clearSync。refreshTags與refreshTable事件之輸入物件帶有pm(回覆通道)，監聽器須為同步函數，並於每條路徑以pm.resolve回傳資料或以pm.reject回傳錯誤(非同步工作須自行catch後以pm回覆)；無監聽器、或監聽器於回覆前同步拋錯時，該pm由本套件以reject終結並視為該次失敗。某表取資料失敗時不推進其時間戳並發出error事件(內容為{msg,err,tableName,timeTag})，之後再收到同一時間戳時會重拉。同一表有多個請求時只提交序號較新之回應(時間戳不倒退)，只有最新之請求會報錯；同一時刻多則推播所產生之同表請求只派發最新者，已派發而被取代之請求其批次即結束等待，故該批次之afterUpdateTableTags可能早於該表資料送達。監聽器同步拋錯時轉為error事件通知，本套件自發之error若無監聽者則改以console.error輸出，不會使行程崩潰；getData監聽器拋錯時該表時間戳已推進，不會因此重拉。表名不得為__proto__。同一事件物件只能建立一個本同步器，重建前須先呼叫clearSync</p>
+    <p>回傳前端資料同步物件，可監聽事件refreshTags、beforeUpdateTableTags、refreshState、refreshTable、getData、afterUpdateTableTags、error，可使用函數setTableTags、updateTableTags、pollingTableTags、clearSync。refreshTags與refreshTable事件之輸入物件帶有pm(回覆通道)，監聽器須為同步函數，並於每條路徑以pm.resolve回傳資料或以pm.reject回傳錯誤(非同步工作須自行catch後以pm回覆)；無監聽器、或監聽器於回覆前同步拋錯時，該pm由本套件以reject終結並視為該次失敗。某表取資料失敗時不推進其時間戳並發出error事件(內容為{msg,err,tableName,timeTag})，之後再收到同一時間戳時會重拉。同一表有多個請求時只提交序號較新之回應(時間戳不倒退)，只有最新之請求會報錯；同一時刻多則推播所產生之同表請求只派發最新者，已派發而被取代之請求其批次即結束等待，故該批次之afterUpdateTableTags可能早於該表資料送達。監聽器同步拋錯時轉為error事件通知，本套件自發之error若無監聽者則改經wsemi之getDiag輸出(預設為console.error，只含固定標籤與錯誤類型之安全摘要，不含錯誤訊息、表名、時間戳與輸入值；完整內容須以opt.logDetail或opt.funLog取得)，不會使行程崩潰；getData監聽器拋錯時該表時間戳已推進，不會因此重拉。表名不得為__proto__。同一事件物件只能建立一個本同步器，重建前須先呼叫clearSync</p>
 </div>
 
 
@@ -510,7 +590,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataClient.mjs.html">WSyncWebdataClient.mjs</a>, <a href="WSyncWebdataClient.mjs.html#line720">line 720</a>
+        <a href="WSyncWebdataClient.mjs.html">WSyncWebdataClient.mjs</a>, <a href="WSyncWebdataClient.mjs.html#line726">line 726</a>
     </li></ul></dd>
     
 
@@ -600,7 +680,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataClient.mjs.html">WSyncWebdataClient.mjs</a>, <a href="WSyncWebdataClient.mjs.html#line592">line 592</a>
+        <a href="WSyncWebdataClient.mjs.html">WSyncWebdataClient.mjs</a>, <a href="WSyncWebdataClient.mjs.html#line598">line 598</a>
     </li></ul></dd>
     
 
@@ -690,7 +770,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataClient.mjs.html">WSyncWebdataClient.mjs</a>, <a href="WSyncWebdataClient.mjs.html#line306">line 306</a>
+        <a href="WSyncWebdataClient.mjs.html">WSyncWebdataClient.mjs</a>, <a href="WSyncWebdataClient.mjs.html#line312">line 312</a>
     </li></ul></dd>
     
 
@@ -830,7 +910,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataClient.mjs.html">WSyncWebdataClient.mjs</a>, <a href="WSyncWebdataClient.mjs.html#line482">line 482</a>
+        <a href="WSyncWebdataClient.mjs.html">WSyncWebdataClient.mjs</a>, <a href="WSyncWebdataClient.mjs.html#line488">line 488</a>
     </li></ul></dd>
     
 
@@ -969,7 +1049,7 @@
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Fri Oct 30 2026 19:14:19 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sat Oct 31 2026 10:50:22 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

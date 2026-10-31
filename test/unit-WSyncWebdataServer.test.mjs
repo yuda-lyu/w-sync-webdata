@@ -289,7 +289,7 @@ describe('WSyncWebdataServer', function() {
         assert.strict.deepEqual(tr.types(), ['queued', 'flush'])
     })
 
-    it('S22 無error監聽者時本套件之error改以console.error輸出', async function() {
+    it('S22 無error監聽者時本套件之error改以console.error輸出(預設只含固定標籤與安全摘要, 細節見unit-diag)', async function() {
         let st = stubConsoleError()
         try {
             let s = new WSyncWebdataServer(w.evem(), { fpTableTags: fdTmp }) //路徑為資料夾, 寫檔必失敗
@@ -300,8 +300,10 @@ describe('WSyncWebdataServer', function() {
             st.restore()
         }
         assert.strict.equal(st.logs.length, 1)
-        assert.strict.equal(st.logs[0][0], '[w-sync-webdata]')
-        assert.strict.equal(st.logs[0][1].msg, 'writeTableTags catch')
+        assert.strict.equal(st.logs[0][0], '[w-sync-webdata] writeTableTags catch') //固定標籤
+        assert.strict.equal(st.logs[0][1].errType, 'Error') //安全摘要(不含err訊息與檔案路徑)
+        assert.strict.equal(st.logs[0][1].msg, undefined)
+        assert.strict.equal(st.logs[0][1].err, undefined)
     })
 
     it('S10 S18 clearSync時同步落檔待寫之時間戳且不推播, 之後同檔之新實體不被覆寫', async function() {

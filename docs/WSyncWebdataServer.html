@@ -80,7 +80,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line240">line 240</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line243">line 243</a>
     </li></ul></dd>
     
 
@@ -340,6 +340,86 @@
 
         <tr>
             
+                <td class="name"><code>logDetail</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Boolean</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    <code>false</code>
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入診斷輸出是否還原為遮罩後之完整細節，只有布林true才生效，預設false(只輸出固定標籤與安全摘要)</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>funLog</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    <code>null</code>
+                
+                </td>
+            
+
+            <td class="description last"><p>輸入診斷輸出函數，格式為(label, safe, detail)=&gt;{}，給予時診斷輸出只交給它而不寫console，label為固定標籤，safe為只含errType與errCode之摘要，detail為遮罩後之完整細節(含錯誤訊息、檔案路徑與輸入值，供使用端遮罩或轉送)；其拋錯與回傳promise之reject皆被吞下，預設null</p></td>
+        </tr>
+
+    
+
+        <tr>
+            
                 <td class="name"><code>onTrace</code></td>
             
 
@@ -406,7 +486,7 @@
 
         
 <div class="param-desc">
-    <p>回傳後端資料同步物件，可監聽事件changeTableTags、error，可使用函數readTableTags、writeTableTags、initTableTags、setTableTags、getTableTags、updateTableTag、clearSync。監聽器須為同步函數，其同步拋錯時轉為error事件通知，本套件自發之error若無監聽者則改以console.error輸出，不會使行程崩潰。同一事件物件只能建立一個本同步器，重建前須先呼叫clearSync；上層掛於ORM等外部物件之監聽須由上層自行移除</p>
+    <p>回傳後端資料同步物件，可監聽事件changeTableTags、error，可使用函數readTableTags、writeTableTags、initTableTags、setTableTags、getTableTags、updateTableTag、clearSync。監聽器須為同步函數，其同步拋錯時轉為error事件通知，本套件自發之error若無監聽者則改經wsemi之getDiag輸出(預設為console.error，只含固定標籤與錯誤類型、錯誤代碼之安全摘要，不含錯誤訊息、檔案路徑與輸入值；完整內容須以opt.logDetail或opt.funLog取得)，不會使行程崩潰。同一事件物件只能建立一個本同步器，重建前須先呼叫clearSync；上層掛於ORM等外部物件之監聽須由上層自行移除</p>
 </div>
 
 
@@ -470,7 +550,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line551">line 551</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line557">line 557</a>
     </li></ul></dd>
     
 
@@ -583,7 +663,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line459">line 459</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line465">line 465</a>
     </li></ul></dd>
     
 
@@ -696,7 +776,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line364">line 364</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line370">line 370</a>
     </li></ul></dd>
     
 
@@ -915,7 +995,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line539">line 539</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line545">line 545</a>
     </li></ul></dd>
     
 
@@ -1055,7 +1135,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line285">line 285</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line291">line 291</a>
     </li></ul></dd>
     
 
@@ -1168,7 +1248,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line422">line 422</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line428">line 428</a>
     </li></ul></dd>
     
 
@@ -1331,7 +1411,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line497">line 497</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line503">line 503</a>
     </li></ul></dd>
     
 
@@ -1494,7 +1574,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line332">line 332</a>
+        <a href="WSyncWebdataServer.mjs.html">WSyncWebdataServer.mjs</a>, <a href="WSyncWebdataServer.mjs.html#line338">line 338</a>
     </li></ul></dd>
     
 
@@ -1606,7 +1686,7 @@
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Fri Oct 30 2026 19:14:19 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sat Oct 31 2026 10:50:22 GMT+0800 (台北標準時間) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

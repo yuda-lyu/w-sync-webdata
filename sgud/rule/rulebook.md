@@ -45,9 +45,9 @@
 
 ### R4 本套件自發之 error 二擇一
 
-- 規則:有 error 監聽者就 emit,否則 `console.error('[w-sync-webdata]', 內容)`;交給 wsemi 之事件物件以門面提供 listenerCount(不可得時視為有監聽者).error 內容形狀 `{ msg, err }`,各表失敗另含 `tableName`、`timeTag`.
+- 規則:有 error 監聽者就 emit(載荷完整不變),否則經 `diag` 輸出(預設 `console.error`;輸出內容見 R12);交給 wsemi 之事件物件以門面提供 listenerCount(不可得時視為有監聽者).error 內容形狀 `{ msg, err }`,各表失敗另含 `tableName`、`timeTag`.
 - 單一擁有者:`src/genEmit.mjs` 之 `deliver`、`evf`.
-- 測試:L4、S22、N2(Node EventEmitter)、N3(只有 emit 之物件).
+- 測試:L4、S22、N2(Node EventEmitter)、N3(只有 emit 之物件);輸出內容見 R12(`test/unit-diag.test.mjs`).
 
 ### R5 同表提交規則
 
@@ -116,6 +116,29 @@
 - 測試:`test/unit-WSyncWebdataServer.test.mjs`(S1/S1b/S1c 及 S4~S22 事件同步、S16b、S23/S23b/S23c/S23d/S24/S25〔`clearSync` 取消 `debounce`,2026-10-30〕、`opt.onTrace` P3/P4 六案)、`test/unit-WSyncWebdataClient.test.mjs`(C 類案改事件同步、T1/T1b/T1c/T2b/T2c/D1/C16/P12/K7/K7b/K7c、`opt.onTrace` P3/P4 六案)、`test/syncdata.test.mjs`(假時鐘)、`test/unit-timeKit.test.mjs`(K1~K3,假時鐘工具之回歸);變異執行器與清單在工作目錄 `tmp/tm-syncwebdata/mutate.mjs`(單項與成對變異,結果與意義見 `sgud/state/state.md`).變異之成對項(P01~P04)用以以實驗證明「單獨存活者為兩道防線重疊之等價」:單獨移除任一道皆存活,成對移除即被既有案擊殺.
 - 負載基準(改造前,2026-10-29 06:13–06:27,`--lock-exclusive`,摘要 `tmp/quiet-run/20261029-060341-tm-syncwebdata-load-before.log`):CPU 壓力 8 行程 ×10:`syncdata` 3/10 失敗;事件迴圈阻塞 400:1000 ×10:`syncdata` 10/10、S4 7/10 失敗;重度阻塞 1500:3000 ×8:0 失敗.
 
+### R12 診斷輸出一律經 wsemi 之 getDiag,預設只出固定標籤與安全摘要(排程第 158 項,2026-10-31)
+
+- 規格(單一來源,內容不在此重述):`C:\opensrcOper\dspec\診斷輸出與遮罩.md`(D1 單一實作、D2 預設不輸出資料值、D4 永不拋錯).
+- 規則:
+  1. `src` 內除註解外**不得直接呼叫 `console`**;診斷輸出一律經 `getDiag(opt)`(前後端建構時各建一個 `diag`,`import getDiag from 'wsemi/src/getDiag.mjs'`,不自寫等價實作),`opt.logDetail`(僅布林 `true` 生效)、`opt.funLog(label, safe, detail)` 由 `getDiag` 自讀(型別不符者視同未給,不拋錯,與本套件他處 `opt` 之寬鬆慣例一致).
+  2. 無 error 監聽者時之輸出(`genEmit.deliver`):label 為 `[w-sync-webdata] ` + `msg.msg` 冒號前之固定詞彙(冒號後為表名,不入標籤);safe 為 `diag.brief(msg.err)`(只有 `errType`,fs 錯誤另有 `errCode`);細節 `() => msg`(完整事件內容,經 `getDiag` 之遮罩拷貝);level `'error'`.未宣告 `safeKeys`,故 `tableName`、`timeTag`、錯誤訊息、被拒收之輸入值恆不入預設輸出.
+  3. 有 error 監聽者時事件載荷不變(不經 `diag`,不寫 console);D3(error 事件載荷經 `diag.err` 遮罩)**不在本項範圍**,本套件無自有秘密來源(權杖、連線字串),監聽者為使用端自行掛載.
+  4. 建構期固定詞彙之提示(`instWConverServer|Client is not an effective object, ...`)亦經 `diag`(預設 `console.log` 固定詞彙,`funLog` 可接管).
+- 站點全表(盤點:Grep `console\.` 於 `src/`,`eeEmit(\|eeEmitNow(` 之 `'error'`;2026-10-31):
+
+| # | 位置 | 內容 | 判定 | 處置 | 測試 |
+|---|---|---|---|---|---|
+| 1 | `src/genEmit.mjs` deliver(原 :53 `console.error('[w-sync-webdata]', msg)`) | 整個 error 內容 `{msg, err, tableName, timeTag}`;`err` 為使用端 `refreshTable`/`refreshTags` 之拒絕值、監聽器拋出值、被拒收之輸入值、fs 錯誤(含路徑) | **屬實洩漏** | 改經 `diag`(規則 2) | G-C1~C7、G-S1~S7、D-*、F-*、X1、X2、L4、S22 |
+| 2 | `src/WSyncWebdataServer.mjs` 建構期(原 :248 `console.log`) | 固定詞彙 | 非洩漏;無法由 `funLog` 接管 | 改經 `diag`(規則 4) | K2 |
+| 3 | `src/WSyncWebdataClient.mjs` 建構期(原 :253 `console.log`) | 固定詞彙 | 同上 | 同上 | K1 |
+| 4 | `src` 內其餘 `console.*` | 全為 JSDoc `@example` 與註解 | 非呼叫 | 刻意不套 | R1(靜態掃描) |
+| 5 | wsemi `evEmit.mjs:96/101`(監聽器拋錯且無 error 監聽者;error 監聽器自身拋錯) | 原始拋出值 | 屬實洩漏,**根源在 wsemi** | 不在本輪、不繞道;見 `agent-out/syncweb-建議wsemi修正.md`;README 〈Breaking changes〉註明殘餘 | 無(wsemi 端) |
+| 6 | wsemi `debounce.mjs:184/202` | 任務拋出值;固定詞彙 | 同上;本套件之任務內部已攔截,僅內部缺陷時可達 | 同上 | 無 |
+| 7 | `error` 事件各發出站點(前端 `eeEmit('error'` 8 處:setTableTags、refreshTable 逾時/拒絕/結算、updateTableTags 輸入/catch、pollingTableTags 拒絕/catch;伺服端 `eeEmit('error'` 5 處〔readTableTags、writeTableTags、initTableTags 與 setTableTags 之輸入、updateTableTag 之輸入〕與 `eeEmitNow('error'` 1 處〔clearSync 落檔失敗〕) | 皆同經 `deliver` | 已套(單一出口) | — | 前端 G-C1~C7(pollingTableTags catch 為不可由公開入口觸發之防禦性站點,同經 deliver);伺服端 G-S1~S7 |
+
+- 盤點指令:`git grep -n --untracked "console\." -- src`(扣除註解)應為 0;`git grep -n --untracked "eeEmit\(Now\)\?('error'" -- src` 列出全部 error 發出站點.
+- 測試:`test/unit-diag.test.mjs`(49 案:預設 G 14、細節 D 14、funLog F 14、X1/X2、有監聽者 E1/E2、建構提示 K1/K2、靜態掃描 R1);`L4`、`S22`(舊案,改為新輸出形狀);變異 13 項(M01~M13)結果與執行器位置見 `sgud/state/state.md`.
+
 ## 2. 已知限制(刻意,已寫入 JSDoc)
 
 - 預設 refreshTimeout=0 時,監聽器永不回覆之表要等到同表下一次請求才結束舊批次之等待.真實觸發點為 w-serv-webdata 前端之提前 return(已轉告).
@@ -127,6 +150,7 @@
 - 前端 setTableTags 之物件直接作為內部狀態(之後就地修改);伺服端 getTableTags 回傳內部狀態、`useInputOnly` 保存傳入之參照.
 - 伺服端 debounce 無上限:持續有更新且間隔皆小於 200ms 時,推播延至更新停止後.合併窗口改由 wsemi `debounce` 擔任(2026-10-29):每 10ms 偵測,實際於最後一次更新後 200~210ms 內觸發(原 lodash 為恰 200ms);`clearSync` 呼叫 wsemi `debounce` 之 `cancel()`(wsemi ≥1.9.33,2026-10-30 起)立即停止偵測計時器並丟棄未執行之任務.
 - 表名不得為 `__proto__`;同一事件物件只能建立一個同步器,重建前須先 clearSync;上層掛於 ORM 之監聽由上層移除.
+- 監聽器(如 `getData`)拋錯且未掛 error 監聽者、或 error 監聽器自身拋錯時,拋出值由 wsemi `evEmit` 原樣寫 `console.error`(R12 站點 5,根源在 wsemi,待其修正;使用端掛 error 監聽者即改走 error 事件).
 
 ## 3. 可見行為變更紀錄
 
@@ -145,6 +169,12 @@
 
 - 變更(非破壞性,對外 API 與事件不變):伺服端 `clearSync` 改呼叫 wsemi `debounce` 之 `cancel()`,偵測計時器於呼叫當下立即清除(原至多再存活約 210ms 才自停);釋放後已排入之任務不再屆滿執行(原由 `isCleared` 略過).`onTrace` 之 `queued` 事件改於排入合併佇列之後通知(原在其前;僅影響回調內呼叫 `clearSync` 之情形:原會使偵測計時器於釋放後重新啟動並存活至屆滿).相依 `wsemi` 升至 ^1.9.33.
 - 測試:負載執行器 `test/tools/loadTrial.mjs`、`loadPreload.mjs` 改為 wsemi 統一版整份複製(R11 規則 8).
+
+### 2026-10-31(診斷輸出輪,syncweb,排程第 158 項)
+
+- 變更(破壞性,對外行為;已寫 README〈Breaking changes〉):前後端無 error 監聽者時,原 `console.error('[w-sync-webdata]', { msg, err, tableName, timeTag })` 改為經 wsemi `getDiag`,預設 `console.error('[w-sync-webdata] <固定詞彙>', { errType[, errCode] })`;完整內容須 `opt.logDetail: true`(輸出 `(label, 細節)`)或 `opt.funLog(label, safe, detail)`;建構期提示亦經同一出口.有 error 監聽者時事件載荷不變.
+- 新增選項:前後端 `opt.logDetail`、`opt.funLog`.
+- 下游影響:以 stderr 文字解析本套件 error 者(含取表名)失效,改掛 error 監聽者或 `opt.funLog`;w-serv-webdata 等依賴本套件者若未掛 error 監聽者,其日誌將不再含表名與錯誤訊息.
 
 ## 4. 測試與驗收對應
 

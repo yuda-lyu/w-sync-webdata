@@ -16,6 +16,23 @@ To view documentation or get support, visit [docs](https://yuda-lyu.github.io/w-
 * `w-sync-webdata-server`: for nodejs server
 * `w-sync-webdata-client`: for nodejs and browser client
 
+## Breaking changes
+
+### Unreleased: diagnostic output without an `error` listener (item 158)
+* The `error` events of both parts carry `err`, `tableName`, `timeTag` or the rejected input value, which may hold tokens, user identities or data values. When **no `error` listener** is attached, they were written whole to `console.error` (`console.error('[w-sync-webdata]', { msg, err, tableName, timeTag })`). Now the output goes through `getDiag` of `wsemi` and **by default only a fixed label and a safe summary** is written:
+```alias
+// before
+console.error('[w-sync-webdata]', { msg: 'can not get table data: tabA', err: Error('...token=...'), tableName: 'tabA', timeTag: '...' })
+// now
+console.error('[w-sync-webdata] can not get table data', { errType: 'Error' })   // server side may also carry errCode, e.g. { errType: 'Error', errCode: 'ENOENT' }
+```
+* New options of both `WSyncWebdataServer` and `WSyncWebdataClient` (same as `getDiag`):
+  * `opt.logDetail`: only the boolean `true` takes effect, the output becomes `console.error(label, detail)` with the whole (masked) event content, for debugging.
+  * `opt.funLog(label, safe, detail)`: takes over the output (nothing is written to `console`), `detail` is the whole (masked) event content so you can mask or forward it yourself; its throw and returned rejection are swallowed.
+* The constructor notice `instWConverServer / instWConverClient is not an effective object, ...` also goes through the same exit (still `console.log` of a fixed text by default; `opt.funLog` can take it over).
+* An attached `error` listener still receives the unchanged event content (`{ msg, err }`, plus `tableName`, `timeTag` for the failed table); only the console fallback changed. If your tooling parsed the old console text, attach an `error` listener or use `opt.funLog`.
+* Known remainder: when a listener of your own throws (e.g. `getData`) and no `error` listener is attached, or when the `error` listener itself throws, the thrown value is still written to `console.error` by `wsemi` (`evEmit`), outside this package. Attach an `error` listener to route it to your own handling.
+
 ## Installation
 
 ### Using npm(ES6 module):
