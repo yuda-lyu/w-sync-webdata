@@ -1,5 +1,5 @@
 /*!
- * w-sync-webdata-client v1.1.16
+ * w-sync-webdata-client v1.1.17
  * (c) 2018-2021 yuda-lyu(semisphere)
  * Released under the MIT License.
  */
