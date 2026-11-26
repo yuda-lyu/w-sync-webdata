@@ -75,9 +75,9 @@
 
 ### R8 伺服端落檔
 
-- 規則:先以 `o2j(…, false, { returnWithStateAndMsg: true })` 序列化,失敗不寫檔、不清待寫旗標、發 error;寫入成功才記錄最後寫入內容並清待寫旗標.
+- 規則:先以 `o2j(…, false, { returnWithStateAndMsg: true, funLog })` 序列化,失敗不寫檔、不清待寫旗標、發 error(其 `err.message` 為固定詞彙、原因接於 `err.cause`,見 R13);寫入成功才記錄最後寫入內容並清待寫旗標.
 - 單一擁有者:`writeTableTagsCore`.
-- 測試:S6、S15、S19.
+- 測試:S6、S15、S19;序列化失敗之訊息與原因見 R13(E3、E3b、D-S3、F-S3).
 
 ### R9 輪詢
 
@@ -91,7 +91,7 @@
 
 ### R11 計時器相關之測試以事件同步(規格 R-TRACE-01 之本套件摘要)
 
-- 規格(單一來源,內容不在此重述):`C:\opensrcOper\dspec\計時器相關函數之觀察回調與測試.md`(P1~P7);全域技能 role-coder-for-test 之計時器一節.
+- 規格(單一來源,內容不在此重述):主控 dspec 之《計時器相關函數之觀察回調與測試》(P1~P7);全域技能 role-coder-for-test 之計時器一節.
 - 規則:
   1. 本套件自有計時器之行為提供 `opt.onTrace`(事件為凍結物件 `{type,...}`;取得回調一律 `getTrace(opt)`〔`import getTrace from 'wsemi/src/getTrace.mjs'`,不自寫等價實作〕;未傳時不組事件物件;回調拋錯/rejection 忽略;釋放後不再呼叫).事件全集見下表與兩端 JSDoc 的 `opt.onTrace`.
   2. 測試不以固定等待當肯定斷言之同步點:同步點為被測物公開事件(`waitEv`)、`onTrace` 事件(`tr.wait`)、測試監聽器被呼叫(`seen.wait`)或 promise;否定斷言(確認某事件不再發生)以排程次序柵欄 `fence()`(`test/tools/syncKit.mjs`,與被測物同為 wsemi `evEmitDelay` 1ms 計時器,先排先派)收尾,不以毫秒窗口.
@@ -118,7 +118,7 @@
 
 ### R12 診斷輸出一律經 wsemi 之 getDiag,預設只出固定標籤與安全摘要(排程第 158 項,2026-10-31)
 
-- 規格(單一來源,內容不在此重述):`C:\opensrcOper\dspec\診斷輸出與遮罩.md`(D1 單一實作、D2 預設不輸出資料值、D4 永不拋錯).
+- 規格(單一來源,內容不在此重述):主控 dspec 之《診斷輸出與遮罩》(D1 單一實作、D2 預設不輸出資料值、D4 永不拋錯).
 - 規則:
   1. `src` 內除註解外**不得直接呼叫 `console`**;診斷輸出一律經 `getDiag(opt)`(前後端建構時各建一個 `diag`,`import getDiag from 'wsemi/src/getDiag.mjs'`,不自寫等價實作),`opt.logDetail`(僅布林 `true` 生效)、`opt.funLog(label, safe, detail)` 由 `getDiag` 自讀(型別不符者視同未給,不拋錯,與本套件他處 `opt` 之寬鬆慣例一致).
   2. 無 error 監聽者時之輸出(`genEmit.deliver`):label 為 `[w-sync-webdata] ` + `msg.msg` 冒號前之固定詞彙(冒號後為表名,不入標籤);safe 為 `diag.brief(msg.err)`(只有 `errType`,fs 錯誤另有 `errCode`);細節 `() => msg`(完整事件內容,經 `getDiag` 之遮罩拷貝);level `'error'`.未宣告 `safeKeys`,故 `tableName`、`timeTag`、錯誤訊息、被拒收之輸入值恆不入預設輸出.
@@ -137,7 +137,29 @@
 | 7 | `error` 事件各發出站點(前端 `eeEmit('error'` 8 處:setTableTags、refreshTable 逾時/拒絕/結算、updateTableTags 輸入/catch、pollingTableTags 拒絕/catch;伺服端 `eeEmit('error'` 5 處〔readTableTags、writeTableTags、initTableTags 與 setTableTags 之輸入、updateTableTag 之輸入〕與 `eeEmitNow('error'` 1 處〔clearSync 落檔失敗〕) | 皆同經 `deliver` | 已套(單一出口) | — | 前端 G-C1~C7(pollingTableTags catch 為不可由公開入口觸發之防禦性站點,同經 deliver);伺服端 G-S1~S7 |
 
 - 盤點指令:`git grep -n --untracked "console\." -- src`(扣除註解)應為 0;`git grep -n --untracked "eeEmit\(Now\)\?('error'" -- src` 列出全部 error 發出站點.
-- 測試:`test/unit-diag.test.mjs`(49 案:預設 G 14、細節 D 14、funLog F 14、X1/X2、有監聽者 E1/E2、建構提示 K1/K2、靜態掃描 R1);`L4`、`S22`(舊案,改為新輸出形狀);變異 13 項(M01~M13)結果與執行器位置見 `sgud/state/state.md`.
+- 測試:`test/unit-diag.test.mjs`(52 案:預設 G 14、細節 D 14、funLog F 14、X1/X2、有監聽者 E1/E2、序列化失敗之訊息與原因 E3/E3b/E3c〔R13〕、建構提示 K1/K2、靜態掃描 R1);`L4`、`S22`(舊案,改為新輸出形狀);變異 13 項(M01~M13)結果與執行器位置見 `sgud/state/state.md`.
+
+### R13 取用 wsemi 已改固定詞彙之失敗訊息者:訊息不拼原因,原因經該函數之診斷出口取回並接為 cause(2026-11-26,排程第 492 項批 10 之下游連動)
+
+- 背景:wsemi ≥1.9.79 之 `o2j` 序列化失敗,`returnWithStateAndMsg` 之 `msg` 改為固定詞彙 `invalid v: must be serializable to JSON`(不含原生錯誤之文字,因 `toJSON` 所拋之文字、循環參照之構造器名與屬性名可能含輸入內容);原生錯誤改經 `opt.logDetail`／`opt.funLog` 之診斷出口交出(預設靜默).本套件原以 `msg` 拼成 error 訊息,其細節出口(`opt.logDetail`／`opt.funLog`)因而失去原因(D-S3、F-S3 紅).
+- 規則:
+  1. 以 wsemi 函數之 `returnWithStateAndMsg` 之 `msg` 組成本套件 error 訊息者,訊息只含固定詞彙(`can not serialize tableTags: ` + 回傳之 `msg`),不拼原因文字.
+  2. 原因經該函數之診斷出口 `funLog(label, safe, detail)` 取回(`detail` 為 wsemi `getDiag` 遮罩後之副本),接為 `new Error(msg, { cause })`(以「`funLog` 有無被呼叫」之旗標判斷,不以 `cause === null` 判斷——拋出值可為 `null`、`undefined`;`funLog` 未被呼叫時省略 `cause`,如 wsemi 舊版或 `o2j` 輸入為 `undefined` 之早退).此 `funLog` 只為取回:**不給 `logDetail`**(免 wsemi 自行寫 console,error 事件仍為一則),**不轉交使用端之 `opt.funLog`**(使用端只收到本套件自發之一則).
+  3. 預設輸出(無 error 監聽者之安全摘要)不讀 `cause`:`diag.brief(err)` 只取 `errType`／`errCode`;`cause` 為不可列舉自有屬性(`JSON.stringify(err)` 為 `{}`),完整內容(`opt.logDetail` 之 `console.error(label, { msg, err })`、`opt.funLog` 之 detail)以 `util.inspect` 呈現 `[cause]`,測試 `dump` 即依此判細節含原因.
+  4. 轉發 `writeTableTagsCore` 錯誤為事件之站點(`writeTableTags`、`clearSync`)須原樣轉發 `err`(不重包,否則丟失 `cause`).
+- 站點全集(盤點:`git grep -n --untracked "returnWithStateAndMsg" -- src` 應只有 `writeTableTagsCore` 1 處;另於 `node_modules/wsemi/src/` 搜 `returnWithStateAndMsg|diagIfAsked`,限本套件 `src` 所 import 之 wsemi 函數,2026-11-26 結果為 `cint`、`j2o`、`o2j` 含前者,僅 `o2j` 含後者):
+
+| # | 位置 | wsemi 函數 | 判定 | 處置 | 測試 |
+|---|---|---|---|---|---|
+| 1 | `src/WSyncWebdataServer.mjs` `writeTableTagsCore`(`o2j(nowTableTags, false, { returnWithStateAndMsg, funLog })`) | `o2j` | **已套**(規則 1、2) | 訊息固定詞彙、`funLog` 取回原因接 `cause` | D-S3、F-S3、E3、E3b、S19、G-S3 |
+| 2 | `writeTableTags` 轉發(`eeEmit('error'`) | — | 已套(規則 4) | 原樣轉發 `err` | E3、D-S3、F-S3 |
+| 3 | `clearSync` 落檔轉發(`eeEmitNow('error'`) | — | 已套(規則 4) | 同上 | E3b |
+| 4 | `readTableTags` 之 `j2o(c)` | `j2o` | 不適用 | 未帶 `returnWithStateAndMsg`,失敗回 `{}`、不取 `msg`,無訊息拼接 | — |
+| 5 | 前端 `cint(...)` 等判斷/轉型函數 | `cint` 等 | 不適用 | 未帶 `returnWithStateAndMsg`,無訊息拼接 | — |
+
+- 盤點指令(於 repo 根,bash):①`git grep -n --untracked "returnWithStateAndMsg" -- src`(應為 1 處);②`for f in $(git grep -hoE "wsemi/src/[A-Za-z0-9_]+\.mjs" -- src | sort -u | sed 's#wsemi/src/##'); do grep -lE "returnWithStateAndMsg|diagIfAsked" node_modules/wsemi/src/$f; done`(列出本套件 import 之 wsemi 函數中帶有該旗標或診斷出口者,2026-11-26 為 `cint`、`j2o`、`o2j` 三檔,其中 `diagIfAsked` 僅 `o2j`;新增之 import 或 wsemi 升版後須重跑,出現新檔即補站點);③`git grep -n --untracked "can not serialize tableTags" -- src test`(訊息只在 `writeTableTagsCore`,測試 E3 系以 `startsWith` 斷言、S19 以 `includes`).
+- 測試:`test/unit-diag.test.mjs` D-S3、F-S3(細節含原因,修前紅)、G-S3(預設輸出不含哨兵且 console 僅一則)、E3、E3b(有 error 監聽者:`err.message` 不含哨兵、`err.cause` 含哨兵、事件一則、console 不寫;E3 為 `writeTableTags` 站點、E3b 為 `clearSync` 站點)、E3c(拋出值為 `null`、`undefined`、字串亦接回 `cause`:以有無取回之旗標判斷,不以 `cause === null` 判斷);`test/unit-WSyncWebdataServer.test.mjs` S19(BigInt:`err.cause instanceof Error`).
+- 變異(11 項 M00~M10,於鏡像根 `./tmp/` 下跑 `unit-diag` 與伺服端單元,不動 `src`;執行器與結果留存於主控任務夾之 agent-out 證據目錄(osw492k)):M00 對照 82/82 綠;M01 不接回原因(6 紅:D-S3、F-S3、E3、E3b、E3c、S19)、M02 原因拼進 `Error` 訊息(3 紅:E3、E3b、E3c;**G-S3、D-S3、F-S3 設計上存活**——預設輸出只取 `errType`,訊息不入)、M03 原因拼進事件 `msg`(其冒號前即預設輸出之標籤;G-S3 等 11 紅)、M04 取回 `safe` 而非 `detail`(6 紅)、M05 改給 `logDetail: true`(7 紅,含 G-S3 之 console 兩則)、M06 轉交使用端 `funLog`(F-S3 紅,出兩則)、M07/M08 兩轉發站點各丟 `cause`(E3 系、E3b 各自擊殺)、M09 回到修前(6 紅)、M10 以 `cause === null` 判斷有無取回(E3c 單獨擊殺).
 
 ## 2. 已知限制(刻意,已寫入 JSDoc)
 
@@ -175,6 +197,11 @@
 - 變更(破壞性,對外行為;已寫 README〈Breaking changes〉):前後端無 error 監聽者時,原 `console.error('[w-sync-webdata]', { msg, err, tableName, timeTag })` 改為經 wsemi `getDiag`,預設 `console.error('[w-sync-webdata] <固定詞彙>', { errType[, errCode] })`;完整內容須 `opt.logDetail: true`(輸出 `(label, 細節)`)或 `opt.funLog(label, safe, detail)`;建構期提示亦經同一出口.有 error 監聽者時事件載荷不變.
 - 新增選項:前後端 `opt.logDetail`、`opt.funLog`.
 - 下游影響:以 stderr 文字解析本套件 error 者(含取表名)失效,改掛 error 監聽者或 `opt.funLog`;w-serv-webdata 等依賴本套件者若未掛 error 監聽者,其日誌將不再含表名與錯誤訊息.
+
+### 2026-11-26(wsemi 1.9.79 下游連動輪,osw492k,排程第 492 項批 10)
+
+- 變更(非破壞性;`err.message` 之變化隨 wsemi 而來):伺服端序列化失敗之 error 事件,`err.message` 為 `can not serialize tableTags: invalid v: must be serializable to JSON`(固定詞彙,不含原生錯誤之文字),原生錯誤接於 `err.cause`(不可列舉);無 error 監聽者之預設輸出不變(固定標籤與安全摘要).細節出口(`opt.logDetail`／`opt.funLog`)照舊含原因(經 `cause`).詳見 R13.
+- 下游影響:以 `err.message` 取得序列化失敗之原生原因者(舊 wsemi 下訊息內含)改讀 `err.cause`.
 
 ## 4. 測試與驗收對應
 

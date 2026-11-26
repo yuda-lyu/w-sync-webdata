@@ -345,6 +345,110 @@ describe('diag(本套件自發之error於無error監聽者時之console輸出)',
         assert.strict.equal(st.calls.length, 0, dump(st.calls))
     })
 
+    //R04b 序列化失敗(wsemi之o2j回傳固定詞彙, 原因只經其診斷出口交出; 規則見rulebook R13): 事件之err.message為固定詞彙, 原因接於err.cause, console不由o2j另寫
+    //  writeTableTagsCore之錯誤由兩個站點轉發為error事件: writeTableTags(eeEmit, E3)與clearSync落檔(eeEmitNow, E3b)
+    let mkBoomTags = () => {
+        return {
+            A: {
+                toJSON: () => {
+                    throw new Error(`serialize failed for ${SENT}`)
+                },
+            },
+        }
+    }
+    let assertSerializeErr = (err) => {
+        assert.ok(err instanceof Error, dump(err))
+        assert.ok(err.message.startsWith('can not serialize tableTags'), err.message)
+        assert.ok(!err.message.includes(SENT), `message leaks: ${err.message}`) //訊息為固定詞彙, 不帶輸入內容
+        assert.ok(err.cause instanceof Error, dump(err.cause)) //原因接回
+        assert.ok(err.cause.message.includes(SENT), `cause lost: ${dump(err.cause)}`)
+    }
+
+    it('E3 伺服端writeTableTags序列化失敗且有error監聽者: err.message為固定詞彙(不含原因之文字), 原因接於err.cause, 事件一則且不寫console', async function() {
+        let st = stubConsole()
+        let got = []
+        let s = null
+        try {
+            s = new WSyncWebdataServer(w.evem(), { fpTableTags: `${fdTmp}/e3.json` })
+            s.on('error', (msg) => {
+                got.push(msg)
+            })
+            s.initTableTags(mkBoomTags(), 'useInputOnly')
+            await within(fence(), 'E3')
+            assert.strict.equal(got.length, 1) //o2j之診斷出口只用於取回原因, 事件仍為一則
+            assert.strict.equal(got[0].msg, 'writeTableTags catch')
+            assertSerializeErr(got[0].err)
+            assert.ok(!fs.existsSync(`${fdTmp}/e3.json`)) //序列化失敗不寫檔
+        }
+        finally {
+            s.clearSync()
+            st.restore()
+        }
+        assert.strict.equal(st.calls.length, 0, dump(st.calls))
+    })
+
+    it('E3c 伺服端序列化失敗之拋出值為非Error(null、undefined、字串)亦接回cause(以有無取回判斷, 不以cause是否為null判斷)', async function() {
+        let vals = [null, undefined, `thrown-${SENT}`]
+        for (let i = 0; i < vals.length; i++) {
+            let v = vals[i]
+            let throwIt = () => {
+                throw v
+            }
+            let st = stubConsole()
+            let got = []
+            let s = null
+            try {
+                s = new WSyncWebdataServer(w.evem(), { fpTableTags: `${fdTmp}/e3c-${i}.json` })
+                s.on('error', (msg) => {
+                    got.push(msg)
+                })
+                s.initTableTags({ A: { toJSON: throwIt } }, 'useInputOnly')
+                await within(fence(), `E3c-${i}`)
+                assert.strict.equal(got.length, 1, `case ${i}: ${dump(got)}`)
+                let err = got[0].err
+                assert.ok(err instanceof Error && err.message.startsWith('can not serialize tableTags') && !err.message.includes(SENT), `case ${i}: ${dump(err)}`)
+                assert.ok(Object.prototype.hasOwnProperty.call(err, 'cause'), `case ${i}: cause lost`) //拋出值為null或undefined時亦有cause屬性
+                if (typeof v === 'string') {
+                    assert.ok(String(err.cause).includes(SENT), `case ${i}: ${dump(err.cause)}`)
+                }
+                else {
+                    assert.ok(err.cause === v, `case ${i}: ${dump(err.cause)}`)
+                }
+            }
+            finally {
+                s.clearSync()
+                st.restore()
+            }
+            assert.strict.equal(st.calls.length, 0, dump(st.calls))
+        }
+    })
+
+    it('E3b 伺服端clearSync落檔序列化失敗且有error監聽者: 同步發出一則, err.message為固定詞彙, 原因接於err.cause', async function() {
+        let st = stubConsole()
+        let got = []
+        let s = null
+        try {
+            s = new WSyncWebdataServer(w.evem(), { fpTableTags: `${fdTmp}/e3b.json` })
+            s.on('error', (msg) => {
+                got.push(msg)
+            })
+            s.initTableTags(mkBoomTags(), 'useInputOnly') //其排程之error於釋放時取消
+            s.updateTableTag('B') //使有待落檔之時間戳, clearSync才會落檔
+            s.clearSync()
+            assert.strict.equal(got.length, 1, dump(got)) //eeEmitNow同步通報
+            assert.strict.equal(got[0].msg, 'writeTableTags catch')
+            assertSerializeErr(got[0].err)
+            await within(fence(), 'E3b')
+            assert.strict.equal(got.length, 1, dump(got)) //釋放後不再派發
+            assert.ok(!fs.existsSync(`${fdTmp}/e3b.json`))
+        }
+        finally {
+            s.clearSync()
+            st.restore()
+        }
+        assert.strict.equal(st.calls.length, 0, dump(st.calls))
+    })
+
     //R05 建構期固定詞彙之提示亦走同一出口
     it('K1 前端傳入無效事件物件時之提示: 預設console.log固定詞彙; opt.funLog可接', async function() {
         let label = 'instWConverClient is not an effective object, and set instWConverClient to an EventEmitter'

@@ -264,6 +264,7 @@ describe('WSyncWebdataServer', function() {
         assert.strict.equal(errs.length, 1)
         assert.strict.equal(errs[0].msg, 'writeTableTags catch')
         assert.ok(String(errs[0].err).includes('can not serialize tableTags'))
+        assert.ok(errs[0].err.cause instanceof Error) //原生之序列化錯誤(BigInt)由o2j之診斷出口取回, 接於cause(R13)
     })
 
     it('S20 initTableTags與setTableTags之null視同{}, 非物件發error且不作用; updateTableTag之表名非有效字串時發error且不作用', async function() {

@@ -53,7 +53,7 @@
 ### E08 o2j 序列化失敗回空字串(2026-10-13 已修)
 
 - 事實:`wsemi/src/o2j.mjs:15` 註明失敗(BigInt、循環參照)回空字串;直接 `writeFileSync` 會把時間戳檔截空且無 error(審查者實測).
-- 做法:`o2j(v, false, { returnWithStateAndMsg: true })` 判斷 state,失敗不寫檔、不清待寫旗標、發 error.
+- 做法:`o2j(v, false, { returnWithStateAndMsg: true })` 判斷 state,失敗不寫檔、不清待寫旗標、發 error.(2026-11-26 起 wsemi 之失敗訊息為固定詞彙,原因經 `funLog` 取回接為 `cause`,見 E24 與規則帳本 R13.)
 
 ### E09 釋放時之落檔要比對檔案仍屬本實體(2026-10-13)
 
@@ -92,8 +92,8 @@
 ### E15 測試鎖排隊可逾數小時,不可把需要鎖的工作派給前景子代理(2026-10-29)
 
 - 情境:本輪 06:23 起以 `quiet-run --lock` 排隊跑測試,他套件(w-serv-broadcast、w-data-syncer、w-converhp、w-serv-orm 等)連續以 `--lock-exclusive` 跑負載試驗,`exclusive-pending.txt` 又擋住所有新的 `--lock` 請求;派出的前景子代理(需跑測試)等鎖 8951494ms(約 2.5 小時)仍未取得,主責 agent 的單次 4 小時額度幾乎耗盡(自行再排的 chain 於 09:41 才取得鎖,距上限僅 20 分鐘),改造後負載試驗與大半變異未及實跑.
-- 事實:`C:\opensrcOper\tmp\locks\` 有 `web-tests`、`web-tests-b` 兩槽與 `exclusive-pending.txt`;獨佔持有者輪流跑 15~60 分鐘;基準本身的獨佔鎖等了 9m20s.
-- 做法:①動工前先 `ls C:/opensrcOper/tmp/locks` 看佇列;②需要鎖的工作自己串成**一個** chain 腳本(`tmp/tm-syncwebdata/chainTest.mjs`、`mutate.mjs`、`chainLoad.mjs`),排隊後先做不需鎖的工作(讀碼、改碼、eslint、文件、乾跑變異可套用性);③子代理只改檔、不跑測試(或明令不排鎖),測試由主責 agent 以單一 chain 跑;④排鎖的背景指令 `timeout` 給足(7200000),但不要讓前景子代理占住回合.
+- 事實:主控之測試鎖目錄有 `web-tests`、`web-tests-b` 兩槽與 `exclusive-pending.txt`;獨佔持有者輪流跑 15~60 分鐘;基準本身的獨佔鎖等了 9m20s.
+- 做法:①動工前先列主控之測試鎖目錄看佇列;②需要鎖的工作自己串成**一個** chain 腳本(`tmp/tm-syncwebdata/chainTest.mjs`、`mutate.mjs`、`chainLoad.mjs`),排隊後先做不需鎖的工作(讀碼、改碼、eslint、文件、乾跑變異可套用性);③子代理只改檔、不跑測試(或明令不排鎖),測試由主責 agent 以單一 chain 跑;④排鎖的背景指令 `timeout` 給足(7200000),但不要讓前景子代理占住回合.
 
 ### E16 時序指紋案 `syncdata.test.mjs` 為本套件負載下最不穩的案(2026-10-29)
 
@@ -148,3 +148,11 @@
 - 陷阱:(1) 細節內 fs 錯誤訊息之路徑由 wsemi `getDiag` 之內建樣式遮為 `open '***'`(不須宣告 `paths`),測試之「細節含哨兵」對路徑類站點不成立,改以錯誤代碼(`EISDIR`、`ENOENT`)為標記;(2) 靜態掃描「src 除註解外不呼叫 console」須處理 CRLF(行註解之正則不可以 `$` 錨定行尾,否則 CRLF 之檔其行註解不被剝除而誤報);(3) 先寫「預設輸出不含哨兵」再寫「標籤形狀」斷言,否則修前紅被標籤格式之失配遮住、看不出洩漏本身;(4) 站點測試須讓哨兵同時出現在 `err` 訊息、表名、時間戳(皆為各站點實有之資料),否則某站點之洩漏不被偵測.
 - 變異(執行器 `mutate.mjs` 留存於主控任務夾 `dnow/20261031101856/agent-out/syncweb-evidence/`;於 `./tmp/syncweb/m/<id>/` 副本變異不動 src,13 項):M01 還原修正(新測 45 紅、舊 L4/S22 各 1 紅)、M02 標籤不截冒號、M03 safe 之 errType 帶 err 字串、M04 level 改 log、M05 不傳 opt 給 getDiag、M06 不給細節、M07/M08 建構提示回 console.log、M09 移除無監聽者判斷、M10 `emitNow` 不經 `deliver`、M11 新增直接 console、M12 有監聽者時仍輸出、M13 safe 之 errCode 取 err.code 原值——13/13 擊殺,對照 M00 49/49 綠.副本變異法:複製 `src` 與必要測試至副本資料夾,於副本內以 `--no-parallel` 跑 mocha(模組解析向上走到套件根之 `node_modules`,不須連結).
 - 下游:w-serv-webdata(唯一直接依賴者)以 `new WSyncWebdataClient(instWConverClient)`(`WServWebdataClient.mjs:287`)與 `new WSyncWebdataServer(instWConverServer, { fpTableTags, genTag })`(`WServWebdataServer.mjs:515`)建立,未傳 `opt`,故升版後其未掛 error 監聽者時之同步錯誤預設為安全摘要(不再含權杖);其自身之 `logDetail`/`funLog` 未轉送給本套件.若轉送,宜包經其自有 `diag`(帶權杖簿遮罩)再交給使用端,不可直接把使用端之 `funLog` 交給本套件(其細節只經 wsemi 內建樣式遮罩,不含該套件之權杖簿).
+
+## 七、wsemi 收嚴回傳值之下游連動(2026-11-26,osw492k,排程第 492 項批 10)
+
+### E24 wsemi 把失敗訊息改為固定詞彙後,原因須經其診斷出口取回,不可再從回傳之 msg 取
+- 情境:wsemi 1.9.79 起 `o2j` 序列化失敗之 `msg` 為固定詞彙(`invalid v: must be serializable to JSON`),原生錯誤改經 `opt.logDetail`／`opt.funLog`(預設靜默)交出.本套件 `writeTableTagsCore` 原以 `msg` 組 `can not serialize tableTags: ${msg}`,細節出口失去原因,全庫連動跟跑 `unit-diag` 之 D-S3、F-S3 紅(`detail lost`);預設案 G-S3 不受影響(預設輸出本就只有 `errType`).
+- 做法(R13):`o2j(…, { returnWithStateAndMsg: true, funLog: (label, safe, detail) => { cause = detail } })` 取回原因,`new Error(msg, { cause })`.`funLog` 只為取回,**不給 `logDetail`**(給了 wsemi 自行寫 console,事件變兩則;`funLog` 與 `logDetail` 並給時 `funLog` 優先,故只給 `funLog` 即不輸出),**不轉交使用端 `opt.funLog`**(會多收一則 wsemi 之診斷).
+- 實測(探測腳本,未留存):`funLog` 之 `detail` 為 `getDiag` 遮罩後之 `Error` 副本(同類別,`message` 保留,`stack` 為字串);`cause` 為 `Error` 之不可列舉自有屬性,故 `JSON.stringify(err)` 為 `{}`(不經 JSON 洩漏),`util.inspect` 呈現 `[cause]: Error: …`——測試之 `dump` 無須改即走到 `cause`;預設輸出 `[ '[w-sync-webdata] writeTableTags catch', { errType: 'Error' } ]` 不含哨兵.
+- 陷阱:(1) 「把原因拼進 `Error` 訊息」之變異**不會被預設案 G-S3 擊殺**——預設輸出只取 `errType`／`errCode`(wsemi `getDiagBriefErr`),訊息根本不入,是 wsemi 之防線擋住;能擊殺它的是有 error 監聽者之案(E3、E3b 斷言 `err.message` 不含哨兵).預設案能擊殺的是「原因進入標籤或安全摘要」之變異(M03:拼進事件 `msg`,其冒號前即標籤).驗預設案之鑑別力須用後者.(2) 兩個轉發站點(`writeTableTags`、`clearSync` 之 `eeEmitNow`)共用 core 之錯誤,任一站點重包 `err` 即丟 `cause`,須各有案(E3 與 E3b),只測一個則另一站點之變異存活.(3) 變異於鏡像根(`./tmp/<案名>/mirror`,複製 `src` 與 `test`、不建目錄連結)跑:模組解析自鏡像根向上走到套件根之 `node_modules`,不動 repo 之 `src`;`src` 為 CRLF,錨點之換行須依檔案實際行尾轉換並斷言恰出現一次.
